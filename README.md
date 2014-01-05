@@ -1,0 +1,4 @@
+sessio
+======
+
+Advanced session data
