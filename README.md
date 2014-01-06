@@ -8,7 +8,7 @@
 
 ### Explicit locking
 
-Be explicit and expose locking similar to how databases expose different levels of locking, and allow applications select the appropriate level. e.g. Read only locks
+Be explicit and expose locking similar to how databases expose different levels of locking, and allow applications select the appropriate level. e.g. Open in read only mode, acquire write lock when needed.
 http://msdn.microsoft.com/en-us/magazine/cc163730.aspx
 
 
@@ -16,10 +16,9 @@ http://msdn.microsoft.com/en-us/magazine/cc163730.aspx
 
 * Expose Redis non-locking commands e.g. http://redis.io/commands/INCR, http://redis.io/commands/append, http://redis.io/commands/rpush etc - to allow for explicitly lockless modifying of session data.
 
-
 ### Explicit updating
 
-
+Allow user to discard update?
 
 ### Security
 
@@ -45,5 +44,33 @@ http://msdn.microsoft.com/en-us/magazine/cc163730.aspx
 
 A redis pub-sub system where your session was subscribed to a pub-sub feed for the life of the request. If any other concurrent request modified the session your copy of the session would receive the publish update.
 
-
 session_discard - why would that be needed?
+
+
+
+
+
+
+## Why?
+
+
+//TODO - the whole way PHP has abstracted sessions with these functions just
+        //sucks. You should be building up a complete response and then sending everything at once,
+        //Not sending a header when this function is called.
+        session_start();
+        
+        
+        
+// session_destroy is evil - the session variables can still be set through setSessionVariable and they
+        // will work for the same page view. They dissapear on the next page view though.
+        // Setting the $_SESSION variable to an empty array deletes all previous entries correctly.
+
+
+
+
+## Questions
+
+
+### Should session re-naming be supported?
+
+

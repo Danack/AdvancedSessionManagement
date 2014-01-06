@@ -1,0 +1,32 @@
+{
+    "name": "Danack/advanced-session-management",
+    "description": "A userland replacement for PHP's session management.",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Danack",
+            "email": "Danack@basereality.com"
+        }
+    ],
+
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/Danack/Auryn"
+        }
+    ],
+
+    "require-dev": {
+        "rdlowrey/auryn": "dev-PluginExperiment2",
+        "phpunit/phpunit": "3.7.*"
+    },
+
+    "require": {
+        "predis/predis": "dev-v0.9/phpdoc-method-tags as v0.9"
+    },
+    "autoload": {
+        "psr-0": {
+            "Intahwebz\\ASM": "src/"
+        }
+    }
+}
