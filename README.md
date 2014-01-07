@@ -67,10 +67,18 @@ session_discard - why would that be needed?
 
 
 
+//PHP automatically modified GET session behaviour - 
+/* Check whether the current request was referred to by
+	 * an external site which invalidates the previously found id. */
+
+
+/* Finally check session id for dangarous characters
+	 * Security note: session id may be embedded in HTML pages.*/
+
 
 ## Questions
 
 
 ### Should session re-naming be supported?
 
-
+### PHP currently 'encrypts' the session data?

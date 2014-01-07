@@ -33,6 +33,7 @@ function session_status () {}
 
 
 //Cache limiter - wtf is this?
+//http://www.php.net/manual/en/function.session-cache-limiter.php
  If <i>cache_limiter</i> is specified, the name of the
  * current cache limiter is changed to the new value.
  * </p>
