@@ -1,3 +1,10 @@
+ - session.read_cache = int (by default 0 = no cache. 5 for 5 seconds)
+     Read cache will be updated if session data has changed.
+ - session.lock = On/Off (On by default. Some save handlers already have
+this)
+ - session.write_short_circuit = On/Off (Off by default)
+
+
 function session_name ($name = null) {}
 function session_module_name ($module = null) {}
 function session_save_path ($path = null) {}
@@ -30,54 +37,30 @@ function session_write_close () {}
 function session_status () {}
 
 
-
-
-//Cache limiter - wtf is this?
-//http://www.php.net/manual/en/function.session-cache-limiter.php
- If <i>cache_limiter</i> is specified, the name of the
- * current cache limiter is changed to the new value.
- * </p>
- * <table>
- * Possible values
- * <tr valign="top">
- * <td>Value</td>
- * <td>Headers sent</td>
- * </tr>
- * <tr valign="top">
- * <td>public</td>
- * <td>
- * <pre>
- * Expires: (sometime in the future, according session.cache_expire)
- * Cache-Control: public, max-age=(sometime in the future, according to session.cache_expire)
- * Last-Modified: (the timestamp of when the session was last saved)
- * </pre>
- * </td>
- * </tr>
- * <tr valign="top">
- * <td>private_no_expire</td>
- * <td>
- * <pre>
- * Cache-Control: private, max-age=(session.cache_expire in the future), pre-check=(session.cache_expire in the future)
- * Last-Modified: (the timestamp of when the session was last saved)
- * </pre>
- * </td>
- * </tr>
- * <tr valign="top">
- * <td>private</td>
- * <td>
- * <pre>
- * Expires: Thu, 19 Nov 1981 08:52:00 GMT
- * Cache-Control: private, max-age=(session.cache_expire in the future), pre-check=(session.cache_expire in the future)
- * Last-Modified: (the timestamp of when the session was last saved)
- * </pre>
- * </td>
- * </tr>
- * <tr valign="top">
- * <td>nocache</td>
- * <td>
- * <pre>
- * Expires: Thu, 19 Nov 1981 08:52:00 GMT
- * Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
- * Pragma: no-cache
- * </pre>
- * </td>
+ 
+ session.save_path	""	PHP_INI_ALL	 
+ session.name	"PHPSESSID"	PHP_INI_ALL	 
+ session.save_handler	"files"	PHP_INI_ALL	 
+ session.auto_start	"0"	PHP_INI_PERDIR	 
+ session.gc_probability	"1"	PHP_INI_ALL	 
+ session.gc_divisor	"100"	PHP_INI_ALL	Available since PHP 4.3.2.
+ session.gc_maxlifetime	"1440"	PHP_INI_ALL	 
+ session.serialize_handler	"php"	PHP_INI_ALL	 
+ session.cookie_lifetime	"0"	PHP_INI_ALL	 
+ session.cookie_path	"/"	PHP_INI_ALL	 
+ session.cookie_domain	""	PHP_INI_ALL	 
+ session.cookie_secure	""	PHP_INI_ALL	Available since PHP 4.0.4.
+ session.cookie_httponly	""	PHP_INI_ALL	Available since PHP 5.2.0.
+ session.use_strict_mode	"0"	PHP_INI_ALL	Available since PHP 5.5.2.
+ session.use_cookies	"1"	PHP_INI_ALL	 
+ session.use_only_cookies	"1"	PHP_INI_ALL	Available since PHP 4.3.0.
+ session.referer_check	""	PHP_INI_ALL	 
+ session.entropy_file	""	PHP_INI_ALL	 
+ session.entropy_length	"0"	PHP_INI_ALL	 
+ session.cache_limiter	"nocache"	PHP_INI_ALL	 
+ session.cache_expire	"180"	PHP_INI_ALL	 
+ session.use_trans_sid	"0"	PHP_INI_ALL	PHP_INI_ALL in PHP <= 4.2.3. PHP_INI_PERDIR in PHP < 5. Available since PHP 4.0.3.
+ session.bug_compat_42	"1"	PHP_INI_ALL	Available since PHP 4.3.0. Removed in PHP 5.4.0.
+ session.bug_compat_warn	"1"	PHP_INI_ALL	Available since PHP 4.3.0. Removed in PHP 5.4.0.
+ session.hash_function	"0"	PHP_INI_ALL	Available since PHP 5.0.0.
+ session.hash_bits_per_character	"4"

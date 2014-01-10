@@ -1,5 +1,7 @@
 <?php
 
+namespace Intahwebz\ASM;
+
 
 class SessionManager {
 
@@ -18,6 +20,9 @@ class SessionManager {
         return new Session($sessionConfig, $openMode, $cookieData);
     }
 
+    function deleteSession($sessionID) {
+        
+    }
 }
 
  

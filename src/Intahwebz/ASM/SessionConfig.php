@@ -5,23 +5,40 @@ namespace Intahwebz\ASM;
 class SessionConfig {
 
     private $redisConfig;
-    private $sessionExpiryTime;
-    private $sessionZombieTime;
+    
+    private $redisKeyPrefix;
+    private $lifetime;
+    private $zombieTime;
     private $sessionName;
-
+    private $lockTime;
     private $name;
+    private $lockSeconds;
+    private $lockMilliSeconds;
+    
+    //Time in microseconds
+    private $maxLockWaitTime;
 
     function __construct(
         $sessionName,
         $redisConfig, 
-        $sessionExpiryTime,
-        $sessionZombieTime
+        $lifetime,
+        $zombieTime,
+        $lockTime = 30
         
     ) {
         $this->redisConfig = $redisConfig;
-        $this->sessionExpiryTime = $sessionExpiryTime;
-        $this->sessionZombieTime = $sessionZombieTime;
+        $this->lifetime = $lifetime;
+        $this->zombieTime = $zombieTime;
         $this->sessionName = $sessionName;
+        $this->lockTime = $lockTime;
+
+        $this->lockSeconds = 5;
+        $this->lockMilliSeconds = 0;
+        
+        //Time in microseconds
+        $this->maxLockWaitTime = 5000000;
+
+        $this->redisKeyPrefix = 'session:';
     }
 
     /**
@@ -42,8 +59,8 @@ class SessionConfig {
     /**
      * @return mixed
      */
-    public function getSessionExpiryTime() {
-        return $this->sessionExpiryTime;
+    public function getLifetime() {
+        return $this->lifetime;
     }
 
     /**
@@ -56,13 +73,25 @@ class SessionConfig {
     /**
      * @return mixed
      */
-    public function getSessionZombieTime() {
-        return $this->sessionZombieTime;
+    public function getZombieTime() {
+        return $this->zombieTime;
+    }
+
+    function getLockSeconds() {
+        return $this->lockSeconds;
     }
     
-    
-    
-    
+    function getLockMilliSeconds() {
+        return $this->lockMilliSeconds;
+    }
+
+    function getMaxLockWaitTime() {
+        return $this->maxLockWaitTime;
+    }
+
+    function getRedisKeyPrefix() {
+        return $this->redisKeyPrefix;
+    }
 }
 
  

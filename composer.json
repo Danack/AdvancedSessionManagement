@@ -22,6 +22,7 @@
     },
 
     "require": {
+        
         "predis/predis": "dev-v0.9/phpdoc-method-tags as v0.9"
     },
     "autoload": {
