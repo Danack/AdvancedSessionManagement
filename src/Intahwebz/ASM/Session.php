@@ -4,6 +4,8 @@ namespace Intahwebz\ASM;
 
 use Predis\Client as RedisClient;
 
+
+
 class Session {
 
     const READ_ONLY = 'READ_ONLY';
@@ -22,7 +24,7 @@ class Session {
      */
     private $sessionConfig;
     
-    private $sessionKey = null;
+    //private $sessionKey = null;
     
     private $sessionID = null;
 
@@ -53,7 +55,7 @@ END;
             $this->openSession();
         }
         else {
-            $this->sessionID = $this->generateSessionKey();
+            $this->sessionID = $this->makeSessionKey();
         }
     }
 
@@ -61,28 +63,33 @@ END;
         return $this->sessionID;
     }
     
-    function generateSessionKey() {
+    function makeSessionKey() {
         return rand();
     }
     
     function regenerateSessionID() {
-        $newSessionID = $this->generateSessionKey();
+        $newSessionID = $this->makeSessionKey();
         $zombieTime = $this->sessionConfig->getZombieTime();
         
         if ($zombieTime > 0) {
+            $zombieKey = $this->generateZombieKey($this->sessionID);
+
             //TODO - Need to think about possibility for session hijacking here?
-            $this->redis->executeRaw([
-                'SET',
+            $this->redis->set(
                 $this->generateZombieKey($this->sessionID), 
                 $newSessionID, 
                 'EX', $this->sessionConfig->getZombieTime()
-            ]);
+            );
         }
 
         //TODO - combine this operation with the setting of the zombie key to avoid 
         //any possibility for a race condition.
-        $this->redis->rename($this->sessionID, $newSessionID);
-
+        
+        //TODO - need to rename all the metadata keys.
+        $this->redis->rename($this->generateRedisDataKey(), $this->generateRedisDataKey($newSessionID));
+        
+        //TODO - do as a redis transaction
+        
         $this->sessionID = $newSessionID;
     }
 
@@ -219,16 +226,14 @@ END;
 
     function mapZombieIDToRegeneratedID() {
         $zombieKeyName = $this->generateZombieKey($this->sessionID);
+        $regeneratedSessionID = $this->redis->get($zombieKeyName);
 
-        if ($zombieKeyName) {
-            $regeneratedSessionID = $this->redis->get($this->generateZombieKey($this->sessionID));
+        if ($regeneratedSessionID) {
+            $this->zombieKeyDetected();
 
-            if ($regeneratedSessionID) {
-                $this->zombieKeyDetected();
-                return $regeneratedSessionID;
-            }
+            return $regeneratedSessionID;
         }
-        
+
         return null;
     }
 
@@ -236,8 +241,11 @@ END;
         return 'zombie:'.$dyingSessionID;
     }
 
-    function generateRedisDataKey() {
-        return 'session:'.$this->sessionID;
+    function generateRedisDataKey($newSessionID = null) {
+        if ($newSessionID == null) {
+            return 'session:'.$this->sessionID;
+        }
+        return 'session:'.$newSessionID;
     }
 
     function generateLockKey() {
@@ -257,9 +265,13 @@ END;
             $regeneratedID = $this->mapZombieIDToRegeneratedID();
             
             if ($regeneratedID) {
-                $this->invalidKeyAccessed();
                 $this->sessionID = $regeneratedID;
-                $newData = $this->redis->hgetall($this->sessionID);
+                $newData = $this->redis->hgetall($this->generateRedisDataKey());
+            }
+            else {
+                //Session id was not valid, and was not mapped from a zombie key to a live
+                //key. Therefore it's a totally dead key.
+                $this->invalidKeyAccessed();
             }
         }
 

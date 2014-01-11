@@ -8,6 +8,8 @@ use Intahwebz\ASM\SessionConfig;
 
 use Predis\Client as RedisClient;
 
+$debug = false;
+
 function extractCookie(array $headers) {
     foreach ($headers as $header) {
         if (stripos($header, 'Set-Cookie') === 0) {
@@ -44,7 +46,7 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $this->sessionConfig = new SessionConfig(
             'SessionTest',
             1000,
-            10
+            60
         );
 
         $this->redisConfig = array(
@@ -55,7 +57,7 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
 
         $this->redisOptions = array(
             'profile' => '2.6',
-            'prefix' => 'sessionTest',
+            //'prefix' => 'sessionTest:',
         );
 
         //$session = $this->provider->make(\Intahwebz\ASM\Session::class);        
@@ -63,28 +65,16 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
     }
 
     function testLock() {
-        $redisClient = new RedisClient($this->redisConfig, $this->redisOptions);
-        $mockCookie = array();
-        $session = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookie, $redisClient);
+        $session = $this->createEmptySession();
         $session->acquireLock();
         $lockReleased = $session->releaseLock();
         $this->assertTrue($lockReleased, "Failed to confirm lock was released.");
     }
 
     function testForceReleaseLock() {
-        $redisClient1 = new RedisClient($this->redisConfig, $this->redisOptions);
-        $redisClient2 = new RedisClient($this->redisConfig, $this->redisOptions);
-        $mockCookie = array();
-        $session1 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookie, $redisClient1);
+        $session1 = $this->createEmptySession();
         $session1->acquireLock();
-
-        $cookie = extractCookie($session1->getHeaders());
-
-        $this->assertNotNull($cookie);
-
-        $mockCookies2 = array_merge(array(), $cookie);
-        
-        $session2 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookies2, $redisClient2);
+        $session2 = $this->createSecondSession($session1);
         
         $this->assertEquals($session2->getSessionID(), $session1->getSessionID(), "Failed to re-open session with cookie.");
 
@@ -94,11 +84,30 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $this->assertFalse($lockReleased, "Lock was not force released by second session.");
     }
 
-    function testStoresData() {
+    /**
+     * @return Session
+     */
+    function createEmptySession() {
+
         $redisClient1 = new RedisClient($this->redisConfig, $this->redisOptions);
         $mockCookie = array();
         $session1 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookie, $redisClient1);
-        
+
+        return $session1;
+    }
+    
+    
+    function createSecondSession(Session $session1) {
+        $cookie = extractCookie($session1->getHeaders());
+        $this->assertNotNull($cookie);
+        $redisClient2 = new RedisClient($this->redisConfig, $this->redisOptions);
+        $mockCookies2 = array_merge(array(), $cookie);
+        $session2 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookies2, $redisClient2);
+        return $session2;
+    }
+    
+    function testStoresData() {
+        $session1 = $this->createEmptySession();
         $sessionData = $session1->getData();
 
         $this->assertEmpty($sessionData);
@@ -106,17 +115,33 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $session1->setData($sessionData);
         
         $session1->close();
+        $session2 = $this->createSecondSession($session1);
+        $readSessionData = $session2->getData();
 
+        $this->assertArrayHasKey('testKey', $readSessionData);
+        $this->assertEquals($readSessionData['testKey'], 'testValue');
+    }
+    
+    function testZombieSession() {
+        $session1 = $this->createEmptySession();
         $cookie = extractCookie($session1->getHeaders());
-
         $this->assertNotNull($cookie);
+
+        //TODO - regenerating key before setData generates exception
+
+        $sessionData['testKey'] = 'testValue';
+        $session1->setData($sessionData);
+        $session1->close();
+
+        $session1->regenerateSessionID();
+
 
         $redisClient2 = new RedisClient($this->redisConfig, $this->redisOptions);
         $mockCookies2 = array_merge(array(), $cookie);
-
+        //Session 2 will now try to open a zombie session.
         $session2 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookies2, $redisClient2);
-        $readSessionData = $session2->getData();
 
+        $readSessionData = $session2->getData();
         $this->assertArrayHasKey('testKey', $readSessionData);
         $this->assertEquals($readSessionData['testKey'], 'testValue');
     }
