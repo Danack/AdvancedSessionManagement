@@ -4,15 +4,11 @@ namespace Intahwebz\ASM;
 
 class SessionConfig {
 
-    private $redisConfig;
-    
-    private $redisKeyPrefix;
+
     private $lifetime;
     private $zombieTime;
     private $sessionName;
-    private $lockTime;
     private $name;
-    private $lockSeconds;
     private $lockMilliSeconds;
     
     //Time in microseconds
@@ -20,20 +16,15 @@ class SessionConfig {
 
     function __construct(
         $sessionName,
-        $redisConfig, 
         $lifetime,
         $zombieTime,
-        $lockTime = 30
+        $lockTimeInMilliseconds = 30000
         
     ) {
-        $this->redisConfig = $redisConfig;
         $this->lifetime = $lifetime;
         $this->zombieTime = $zombieTime;
         $this->sessionName = $sessionName;
-        $this->lockTime = $lockTime;
-
-        $this->lockSeconds = 5;
-        $this->lockMilliSeconds = 0;
+        $this->lockMilliSeconds = $lockTimeInMilliseconds;
         
         //Time in microseconds
         $this->maxLockWaitTime = 5000000;
@@ -47,14 +38,6 @@ class SessionConfig {
     public function getName() {
         return $this->name;
     }
-
-    /**
-     * @return mixed
-     */
-    public function getRedisConfig() {
-        return $this->redisConfig;
-    }
-
 
     /**
      * @return mixed
@@ -76,10 +59,6 @@ class SessionConfig {
     public function getZombieTime() {
         return $this->zombieTime;
     }
-
-    function getLockSeconds() {
-        return $this->lockSeconds;
-    }
     
     function getLockMilliSeconds() {
         return $this->lockMilliSeconds;
@@ -87,10 +66,6 @@ class SessionConfig {
 
     function getMaxLockWaitTime() {
         return $this->maxLockWaitTime;
-    }
-
-    function getRedisKeyPrefix() {
-        return $this->redisKeyPrefix;
     }
 }
 

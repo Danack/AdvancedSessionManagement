@@ -12,7 +12,7 @@ namespace Intahwebz\ASM {
 
 namespace {
 
-function generateCookieHeader($sessionName, $sessionID, $lifetime, $path = null, $domain = false, $secure = false, $httpOnly = true) {
+function generateCookieHeader($time, $sessionName, $sessionID, $lifetime, $path = null, $domain = false, $secure = false, $httpOnly = true) {
 
     $COOKIE_SET_COOKIE = "Set-Cookie: ";
     $COOKIE_EXPIRES = "; expires=";
@@ -25,14 +25,13 @@ function generateCookieHeader($sessionName, $sessionID, $lifetime, $path = null,
     $header  = $COOKIE_SET_COOKIE;
     $header .= $sessionName.'='.$sessionID;
 
-    $expireTime = time() + $lifetime;
+    $expireTime = $time + $lifetime;
     $expireDate = date("D, d-M-Y H:i:s T", $expireTime);
     $header .= $COOKIE_EXPIRES;
     $header .= $expireDate;
 
     $header .= $COOKIE_MAX_AGE;
     $header .= $lifetime;
-
 
     if ($path) {
         $header .= $COOKIE_PATH;

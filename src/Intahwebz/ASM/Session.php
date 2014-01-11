@@ -31,7 +31,7 @@ class Session {
     private $lockNumber;
 
     const unlockScript = <<< END
- if redis.call("get",KEYS[1]) == ARGV[1]
+if redis.call("get",KEYS[1]) == ARGV[1]
 then
     return redis.call("del",KEYS[1])
 else
@@ -41,10 +41,11 @@ END;
 
     const lockSleepTime = 1000;
 
-    function __construct(SessionConfig $sessionConfig, $openMode, $cookieData) {
+    function __construct(SessionConfig $sessionConfig, $openMode, $cookieData, RedisClient $redisClient) {
         \Intahwebz\ASM\Functions::load();
         $this->sessionConfig = $sessionConfig;
-        $this->redis = new RedisClient($sessionConfig->getRedisConfig());
+
+        $this->redis = $redisClient;
         
         if (isset($cookieData[$sessionConfig->getSessionName()])) {
             $this->sessionID = $cookieData[$sessionConfig->getSessionName()];
@@ -56,6 +57,11 @@ END;
         }
     }
 
+    
+    function getSessionID() {
+        return $this->sessionID;
+    }
+    
     function generateSessionKey() {
         return rand();
     }
@@ -66,11 +72,12 @@ END;
         
         if ($zombieTime > 0) {
             //TODO - Need to think about possibility for session hijacking here?
-            $this->redis->set(
+            $this->redis->executeRaw([
+                'SET',
                 $this->generateZombieKey($this->sessionID), 
                 $newSessionID, 
-                $this->sessionConfig->getZombieTime()
-            );
+                'EX', $this->sessionConfig->getZombieTime()
+            ]);
         }
 
         //TODO - combine this operation with the setting of the zombie key to avoid 
@@ -79,8 +86,6 @@ END;
 
         $this->sessionID = $newSessionID;
     }
-
-
 
     /**
      * Deletes all data in the session.
@@ -151,15 +156,13 @@ END;
         $lifetime = $this->sessionConfig->getLifetime();
 
         $cookieHeader = generateCookieHeader(
+            time(),
             $this->sessionConfig->getSessionName(),
             $this->sessionID,
             $lifetime
         );
 
         $headers[] = $cookieHeader;
-
-        //$this->redis->ttl($this->getRedisSessionKey());
-        
 
         //$lastModifiedTime = $this->getLastWriteTime();
 //        $expireTime = $lastModifiedTime + $expireLength
@@ -231,19 +234,19 @@ END;
     }
 
     function generateZombieKey($dyingSessionID) {
-        return $this->sessionConfig->getRedisKeyPrefix().'zombie:'.$dyingSessionID;
+        return 'zombie:'.$dyingSessionID;
     }
 
     function generateRedisSessionKey() {
-        return $this->sessionConfig->getRedisKeyPrefix().'session:'.$this->$this->sessionID;
+        return 'session:'.$this->sessionID;
     }
 
     function generateLockKey() {
-        return $this->sessionConfig->getRedisKeyPrefix().'session:'.$this->sessionID.':lock';
+        return 'session:'.$this->sessionID.':lock';
     }
 
     function generateHistoryKey() {
-        return $this->sessionConfig->getRedisKeyPrefix().'session:'.$this->sessionID.':history';
+        return 'session:'.$this->sessionID.':history';
     }
 
     function loadData() {
@@ -290,15 +293,22 @@ END;
         $this->lockNumber = rand();
 
         $totalTimeWaitedForLock = 0;
-        
+
         do {
             $set = $this->redis->set(
-                $this->lockKey, 
-                $this->lockNumber, 
-                $this->sessionConfig->getLockSeconds(),
-                $this->sessionConfig->getLockMilliSeconds(),
+                $this->lockKey,
+                $this->lockNumber,
+                'PX', $this->sessionConfig->getLockMilliSeconds(),
                 'NX'
             );
+
+            if ($set == null) {
+                throw new FailedToAcquireLockException("Failed to acquire lock for session data, lockKey already exists.");
+            }
+
+            if ($set != "OK") {
+                throw new FailedToAcquireLockException("Failed to acquire lock for session data with unknown reason");
+            }
 
             if ($totalTimeWaitedForLock >= $this->sessionConfig->getMaxLockWaitTime()) {
                 throw new FailedToAcquireLockException("Failed to acquire lock for session data.");
@@ -311,30 +321,44 @@ END;
             $totalTimeWaitedForLock += self::lockSleepTime;
             
         } while(!$set);
+        
     }
     
+
+
+    function releaseLock() {
+
+        $keysRemoved = $this->redis->eval(self::unlockScript, 1, $this->lockKey, $this->lockNumber);
+
+        $lockReleased = true;
+        
+        if (!$keysRemoved) {
+            //lock was force removed by a different script, or this script went over $this->sessionConfig->lockTime
+            //Either way - bad things are likely to happen
+            $this->processLockWasAlreadyReleased();
+            $lockReleased = false;
+        }
+
+        return $lockReleased;
+    }
+
     function renewLock() {
-        $set = $this->redis->set(
+        $set = $this->redis->executeRaw([
+            'SET',
             $this->lockKey,
             $this->lockNumber,
-            $this->sessionConfig->getLockSeconds(),
-            $this->sessionConfig->getLockMilliSeconds(),
+            'PX', $this->sessionConfig->getLockMilliSeconds(),
             'XX'
-        );
-        
+        ]);
+
         if (!$set) {
             throw new FailedToAcquireLockException("Failed to renew lock.");
         }
     }
-
-    function releaseLock() {
-        $keysRemoved = $this->redis->eval(self::unlockScript, 1, $this->lockKey, $this->lockNumber);
-
-        if ($keysRemoved == 0) {
-            //lock was force removed by a different script, or this script went over $this->sessionConfig->lockTime
-            //Either way - bad things are likely to happen
-            $this->processLockWasAlreadyReleased();
-        }
+    
+    function forceReleaseLock() {
+        $this->lockKey = $this->generateLockKey();
+        $this->redis->del($this->lockKey);
     }
 
     function invalidKeyAccessed() {
@@ -344,23 +368,5 @@ END;
     }
     
     function processLockWasAlreadyReleased() {
-        
     }
 }
-
-
-/*
-
-
-Patterns
-The command SET resource-name anystring NX EX max-lock-time is a simple way to implement a locking system with Redis.
-A client can acquire the lock if the above command returns OK (or retry after some time if the command returns Nil), and remove the lock just using DEL.
-The lock will be auto-released after the expire time is reached.
-It is possible to make this system more robust modifying the unlock schema as follows:
-Instead of setting a fixed string, set a non-guessable large random string, called token.
-Instead of releasing the lock with DEL, send a script that only removes the key if the value matches.
-This avoids that a client will try to release the lock after the expire time deleting the key created by another client that acquired the lock later.
-An example of unlock script would be similar to the following:
-
-
-*/
