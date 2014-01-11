@@ -94,6 +94,32 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $this->assertFalse($lockReleased, "Lock was not force released by second session.");
     }
 
+    function testStoresData() {
+        $redisClient1 = new RedisClient($this->redisConfig, $this->redisOptions);
+        $mockCookie = array();
+        $session1 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookie, $redisClient1);
+        
+        $sessionData = $session1->getData();
+
+        $this->assertEmpty($sessionData);
+        $sessionData['testKey'] = 'testValue';
+        $session1->setData($sessionData);
+        
+        $session1->close();
+
+        $cookie = extractCookie($session1->getHeaders());
+
+        $this->assertNotNull($cookie);
+
+        $redisClient2 = new RedisClient($this->redisConfig, $this->redisOptions);
+        $mockCookies2 = array_merge(array(), $cookie);
+
+        $session2 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookies2, $redisClient2);
+        $readSessionData = $session2->getData();
+
+        $this->assertArrayHasKey('testKey', $readSessionData);
+        $this->assertEquals($readSessionData['testKey'], 'testValue');
+    }
 }
 
  

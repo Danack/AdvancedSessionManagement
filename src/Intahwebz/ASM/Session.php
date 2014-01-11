@@ -57,7 +57,6 @@ END;
         }
     }
 
-    
     function getSessionID() {
         return $this->sessionID;
     }
@@ -237,7 +236,7 @@ END;
         return 'zombie:'.$dyingSessionID;
     }
 
-    function generateRedisSessionKey() {
+    function generateRedisDataKey() {
         return 'session:'.$this->sessionID;
     }
 
@@ -250,7 +249,7 @@ END;
     }
 
     function loadData() {
-        $newData = $this->redis->hgetall($this->generateRedisSessionKey());
+        $newData = $this->redis->hgetall($this->generateRedisDataKey());
         
         if ($newData == null) {
             //No session data was available. Check to see if there is a mapping
@@ -279,12 +278,12 @@ END;
             $raw = serialize($value);
             $saveData[$key] = $raw;
         }
-        if (count($saveData) == 0) {
-            $this->redis->del($this->sessionKey);
-        }
-        else {
-            $this->redis->hmset($this->sessionKey, $saveData);
-        }
+//        if (count($saveData) == 0) {
+//            $this->redis->del($this->sessionID);
+//        }
+//        else {
+            $this->redis->hmset($this->generateRedisDataKey(), $saveData);
+        //}
     }
 
 
