@@ -24,16 +24,14 @@ function maskAndCompareIPAddresses($ipAddress1, $ipAddress2, $maskBits) {
     return false;
 }
 
-function extractCookie(array $headers) {
-    foreach ($headers as $header) {
-        if (stripos($header, 'Set-Cookie') === 0) {
-            $matches = array();
-            $regex = "/Set-Cookie: (\w*)=(\w*);.*/";
-            $count = preg_match($regex, $header, $matches, PREG_OFFSET_CAPTURE);
+function extractCookie($header) {
+    if (stripos($header, 'Set-Cookie') === 0) {
+        $matches = array();
+        $regex = "/Set-Cookie: (\w*)=(\w*);.*/";
+        $count = preg_match($regex, $header, $matches, PREG_OFFSET_CAPTURE);
 
-            if ($count == 1) {
-                return array($matches[1][0] => $matches[2][0]);
-            }
+        if ($count == 1) {
+            return array($matches[1][0] => $matches[2][0]);
         }
     }
 
@@ -70,7 +68,7 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
 
 
     function createSecondSession(Session $session1, ValidationConfig $validationConfig = null,SessionProfile $sessionProfile = null) {
-        $cookie = extractCookie($session1->getHeaders());
+        $cookie = extractCookie($session1->getHeader());
         $this->assertNotNull($cookie);
         $redisClient2 = new RedisClient($this->redisConfig, $this->redisOptions);
         $mockCookies2 = array_merge(array(), $cookie);
@@ -146,7 +144,7 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
     
     function testZombieSession() {
         $session1 = $this->createEmptySession();
-        $cookie = extractCookie($session1->getHeaders());
+        $cookie = extractCookie($session1->getHeader());
         $this->assertNotNull($cookie);
 
         //TODO - regenerating key before setData generates exception

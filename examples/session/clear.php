@@ -9,10 +9,9 @@ try {
     echo "Initial session data is :<br/>";
     var_dump($sessionData);
     echo "<br/>";
-    
-    foreach ($session->getHeaders() as $header) {
-        header($header);
-    }
+
+    header($session->getHeader());
+
     $session->clear();
     $session->close();
     

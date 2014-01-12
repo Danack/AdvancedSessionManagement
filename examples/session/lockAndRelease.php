@@ -6,9 +6,7 @@ require_once('bootstrap.php');
 try {
     $sessionData = $session->openSession();
 
-    foreach ($session->getHeaders() as $header) {
-        header($header);
-    }
+    header($session->getHeader());
 
     $session->acquireLock();
 

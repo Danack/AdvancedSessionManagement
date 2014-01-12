@@ -182,12 +182,9 @@ END;
     }
 
     /**
-     * @param string $caching
-     * @return array
-     * @throws \InvalidArgumentException
+     * @return string
      */
-    function getHeaders($caching = self::CACHE_SKIP) {
-        $headers = array();
+    function getHeader() {
 
         $lifetime = $this->sessionConfig->getLifetime();
 
@@ -198,50 +195,7 @@ END;
             $lifetime
         );
 
-        $headers[] = $cookieHeader;
-
-        //$lastModifiedTime = $this->getLastWriteTime();
-//        $expireTime = $lastModifiedTime + $expireLength
-//        $expireDate = date("D, d-M-Y H:i:s T", $expireTime);
-        $expireDate = 'Thu, 19 Nov 1981 08:52:00 GMT';
-        $lastModifiedDate = 'Thu, 19 Nov 1981 08:52:00 GMT';
-        
-        switch($caching) {
-
-            case(self::CACHE_SKIP): {
-                //nothing to do. 
-                break;
-            }
-            case(self::CACHE_PUBLIC): {
-                $headers[] = "Expires: ".$expireDate;
-                $headers[] = "Cache-Control: public, max-age=".$this->sessionConfig->getLifetime();
-                $headers[] = "Last-Modified: (the timestamp of when the session was last saved)";
-                break;
-            }
-            case(self::CACHE_PRIVATE): {
-                $headers[] = "Expires: ".$expireDate;
-                $headers[] = "Cache-Control: private, max-age=".$lifetime." pre-check=".$lifetime;
-                $headers[] = "Last-Modified: (the timestamp of when the session was last saved)";
-                break;
-            }
-            case(self::CACHE_PRIVATE_NO_EXPIRE): {
-                $headers[] = "Cache-Control: private, max-age=".$lifetime." pre-check=".$lifetime;
-                $headers[] = "Last-Modified: ".$lastModifiedDate;
-                break;
-            }
-            case(self::CACHE_NO_CACHE): {
-
-                $headers[] = "Expires: ".$expireDate;
-                $headers[] = "Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0";
-                $headers[] = "Pragma: no-cache";
-                break;
-            }
-            default: {
-                throw new \InvalidArgumentException("Unknown cache setting '$caching'.");
-            }
-        }
-
-        return $headers;
+        return $cookieHeader;
     }
 
 
