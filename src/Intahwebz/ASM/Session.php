@@ -23,9 +23,7 @@ class Session {
      * @var SessionConfig
      */
     private $sessionConfig;
-    
-    //private $sessionKey = null;
-    
+
     private $sessionID = null;
 
     private $lockKey;
@@ -43,19 +41,48 @@ END;
 
     const lockSleepTime = 1000;
 
-    function __construct(SessionConfig $sessionConfig, $openMode, $cookieData, RedisClient $redisClient) {
+    private $sessionProfile;
+
+    private $cookieData;
+
+    function __construct(
+        SessionConfig $sessionConfig, 
+        $openMode, 
+        $cookieData,
+        RedisClient $redisClient,
+        ValidationConfig $validationConfig = null,
+        SessionProfile $sessionProfile = null
+    ) {
         \Intahwebz\ASM\Functions::load();
         $this->sessionConfig = $sessionConfig;
-
         $this->redis = $redisClient;
-        
-        if (isset($cookieData[$sessionConfig->getSessionName()])) {
-            $this->sessionID = $cookieData[$sessionConfig->getSessionName()];
+        $this->validationConfig = $validationConfig;
+        $this->sessionProfile = $sessionProfile;
+        $this->cookieData = $cookieData;
+    }
+
+    /**
+     * 
+     */
+    function start() {
+        $existingSessionOpened = false;
+
+        if (isset($this->cookieData[$this->sessionConfig->getSessionName()])) {
+            $this->sessionID = $this->cookieData[$this->sessionConfig->getSessionName()];
             //Only start the session automatically, if the user sent us a cookie.
-            $this->openSession();
+            $existingSessionOpened = $this->openSession();
         }
         else {
             $this->sessionID = $this->makeSessionKey();
+            $this->sessionData = array();
+        }
+        
+        if ($existingSessionOpened == true) {
+            $this->performProfileSecurityCheck();
+        }
+        else {
+            //Record new ip address
+            $this->addProfile();
         }
     }
 
@@ -76,7 +103,7 @@ END;
 
             //TODO - Need to think about possibility for session hijacking here?
             $this->redis->set(
-                $this->generateZombieKey($this->sessionID), 
+                $zombieKey, 
                 $newSessionID, 
                 'EX', $this->sessionConfig->getZombieTime()
             );
@@ -107,12 +134,15 @@ END;
     function openSession() {
         $this->loadData();
 
-        if (!$this->sessionData) {
-            $this->invalidKeyAccessed();
-            $this->sessionData = array();
+        if ($this->sessionData) {
+            return true;
         }
 
-        return $this->sessionData;
+        //No session data was 
+        $this->invalidKeyAccessed();
+        $this->sessionData = array();
+
+        return false;
     }
 
     /**
@@ -138,7 +168,7 @@ END;
     function append($index, $value) {
         $this->sessionData[$index][] = $value;
 
-        $this->saveAllData();        
+        $this->saveAllData();
         $this->loadData();
 
         return $this->sessionData;
@@ -256,6 +286,11 @@ END;
         return 'session:'.$this->sessionID.':history';
     }
 
+    function generateProfileKey() {
+        return 'session:'.$this->sessionID.':profile';
+    }
+    
+
     function loadData() {
         $newData = $this->redis->hgetall($this->generateRedisDataKey());
         
@@ -290,12 +325,14 @@ END;
             $raw = serialize($value);
             $saveData[$key] = $raw;
         }
-//        if (count($saveData) == 0) {
-//            $this->redis->del($this->sessionID);
-//        }
-//        else {
+        if (count($saveData) == 0) {
+            //Redis can't save empty hashes. Either need to delete the key or
+            //do magic.
+            $this->redis->del($this->generateRedisDataKey());
+        }
+        else {
             $this->redis->hmset($this->generateRedisDataKey(), $saveData);
-        //}
+        }
     }
 
 
@@ -332,7 +369,6 @@ END;
             $totalTimeWaitedForLock += self::lockSleepTime;
             
         } while(!$set);
-        
     }
     
 
@@ -353,6 +389,9 @@ END;
         return $lockReleased;
     }
 
+    /**
+     * @throws FailedToAcquireLockException
+     */
     function renewLock() {
         $set = $this->redis->executeRaw([
             'SET',
@@ -366,7 +405,10 @@ END;
             throw new FailedToAcquireLockException("Failed to renew lock.");
         }
     }
-    
+
+    /**
+     * 
+     */
     function forceReleaseLock() {
         $this->lockKey = $this->generateLockKey();
         $this->redis->del($this->lockKey);
@@ -379,5 +421,47 @@ END;
     }
     
     function processLockWasAlreadyReleased() {
+    }
+
+    function performSecurityCheck() {
+        //get past 
+    }
+
+    function performProfileSecurityCheck() {
+        if (!$this->validationConfig) {
+            return;
+        }
+
+        if (!$this->sessionProfile) {
+            return;
+        }
+
+        $profileChangedCallable = $this->validationConfig->getProfileChanged();
+        if (!$profileChangedCallable) {
+            return;
+        }
+
+        $profileKey = $this->generateProfileKey();
+        $profileDataArray = $this->redis->lrange($profileKey, 0, -1);
+
+        $profileObjectArray = array();
+        
+        foreach ($profileDataArray as $profileData) {
+            $profileObject = unserialize($profileData);
+            $profileObjectArray[] = $profileObject;
+        }
+
+        call_user_func($profileChangedCallable, $this, $this->sessionProfile, $profileObjectArray);
+    }
+
+    /**
+     * Add session profile to the approved session profile list
+     */
+    function addProfile() {
+        if ($this->sessionProfile) {
+            $profileKey = $this->generateProfileKey();
+            $profileData = serialize($this->sessionProfile);
+            $this->redis->rpush($profileKey, $profileData);
+        }
     }
 }

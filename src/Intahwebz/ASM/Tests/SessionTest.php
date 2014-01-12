@@ -5,10 +5,24 @@ namespace Intahwebz\ASM\Tests;
 
 use Intahwebz\ASM\Session;
 use Intahwebz\ASM\SessionConfig;
+use Intahwebz\ASM\SessionProfile;
+use Intahwebz\ASM\ValidationConfig;
 
 use Predis\Client as RedisClient;
 
-$debug = false;
+function maskAndCompareIPAddresses($ipAddress1, $ipAddress2, $maskBits) {
+
+    $ipAddress1 = ip2long($ipAddress1);
+    $ipAddress2 = ip2long($ipAddress2);
+
+    $mask = (1<<(32 - $maskBits));
+    
+    if (($ipAddress1 & $mask) == ($ipAddress2 & $mask)) {
+        return true;
+    }
+
+    return false;
+}
 
 function extractCookie(array $headers) {
     foreach ($headers as $header) {
@@ -40,6 +54,34 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
     
     private $redisOptions;
 
+
+    /**
+     * @return Session
+     */
+    function createEmptySession(ValidationConfig $validationConfig = null, SessionProfile $sessionProfile = null) {
+
+        $redisClient1 = new RedisClient($this->redisConfig, $this->redisOptions);
+        $mockCookie = array();
+        $session1 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookie, $redisClient1, $validationConfig, $sessionProfile);
+        $session1->start();
+
+        return $session1;
+    }
+
+
+    function createSecondSession(Session $session1, ValidationConfig $validationConfig = null,SessionProfile $sessionProfile = null) {
+        $cookie = extractCookie($session1->getHeaders());
+        $this->assertNotNull($cookie);
+        $redisClient2 = new RedisClient($this->redisConfig, $this->redisOptions);
+        $mockCookies2 = array_merge(array(), $cookie);
+        $session2 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookies2, $redisClient2, $validationConfig, $sessionProfile);
+
+        $session2->start();
+
+        return $session2;
+    }
+    
+
     protected function setUp() {
         $this->provider = createProvider();
 
@@ -57,7 +99,7 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
 
         $this->redisOptions = array(
             'profile' => '2.6',
-            //'prefix' => 'sessionTest:',
+            'prefix' => 'sessionTest:',
         );
 
         //$session = $this->provider->make(\Intahwebz\ASM\Session::class);        
@@ -84,27 +126,7 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $this->assertFalse($lockReleased, "Lock was not force released by second session.");
     }
 
-    /**
-     * @return Session
-     */
-    function createEmptySession() {
 
-        $redisClient1 = new RedisClient($this->redisConfig, $this->redisOptions);
-        $mockCookie = array();
-        $session1 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookie, $redisClient1);
-
-        return $session1;
-    }
-    
-    
-    function createSecondSession(Session $session1) {
-        $cookie = extractCookie($session1->getHeaders());
-        $this->assertNotNull($cookie);
-        $redisClient2 = new RedisClient($this->redisConfig, $this->redisOptions);
-        $mockCookies2 = array_merge(array(), $cookie);
-        $session2 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookies2, $redisClient2);
-        return $session2;
-    }
     
     function testStoresData() {
         $session1 = $this->createEmptySession();
@@ -113,7 +135,7 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $this->assertEmpty($sessionData);
         $sessionData['testKey'] = 'testValue';
         $session1->setData($sessionData);
-        
+
         $session1->close();
         $session2 = $this->createSecondSession($session1);
         $readSessionData = $session2->getData();
@@ -135,16 +157,56 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
 
         $session1->regenerateSessionID();
 
-
         $redisClient2 = new RedisClient($this->redisConfig, $this->redisOptions);
         $mockCookies2 = array_merge(array(), $cookie);
         //Session 2 will now try to open a zombie session.
         $session2 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookies2, $redisClient2);
+        $session2->start();
 
         $readSessionData = $session2->getData();
         $this->assertArrayHasKey('testKey', $readSessionData);
         $this->assertEquals($readSessionData['testKey'], 'testValue');
     }
+    
+    
+    function testChangedUserAgentCallsProfileChanged() {
+
+        $userAgent1 = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.63 Safari/537.36";
+        $userAgent2 = "Opera/7.50 (Windows ME; U) [en]";
+
+        $sessionProfile1 = new SessionProfile('1.2.3.4', $userAgent1);
+        $sessionProfile2 = new SessionProfile('1.2.3.50', $userAgent2);
+        $sessionProfile3 = new SessionProfile('1.2.30.4', $userAgent2);
+
+        $profileChangedCalled = false;
+
+        $profileChangedFunction = function (Session $session, SessionProfile $newProfile, $profileList) use (&$profileChangedCalled) {
+            $profileChangedCalled = true;
+
+            foreach ($profileList as $pastProfile) {
+                /** @var $pastProfile SessionProfile */
+                if (maskAndCompareIPAddresses($newProfile->getIPAddress(), $pastProfile->getIPAddress(), 24) == false) {
+                    throw new \InvalidArgumentException("Users ip address has changed, must login again.");
+                }
+            }
+        };
+
+        $validationConfig = new ValidationConfig($profileChangedFunction, null, null);
+
+        $session1 = $this->createEmptySession($validationConfig, $sessionProfile1);
+
+        $sessionData = $session1->getData();
+        $sessionData['profileTest'] = true;
+        $session1->setData($sessionData);
+        $session1->close();
+
+        $session2 = $this->createSecondSession($session1, $validationConfig, $sessionProfile2);
+        $this->assertTrue($profileChangedCalled);
+
+        $this->setExpectedException('\InvalidArgumentException');
+        $session3 = $this->createSecondSession($session1, $validationConfig, $sessionProfile3);
+    }
+    
 }
 
  

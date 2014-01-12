@@ -1,5 +1,7 @@
 <?php
 
+namespace Intahwebz\ASM;
+
 
 class SessionProfile {
     
@@ -11,6 +13,23 @@ class SessionProfile {
         $this->ipAddress = $ipAddress; 
         $this->userAgent = $userAgent;
     }
+
+    /**
+     * @return mixed
+     */
+    public function getIPAddress() {
+        return $this->ipAddress;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getUserAgent() {
+        return $this->userAgent;
+    }
+    
+    
+    
     
 }
 

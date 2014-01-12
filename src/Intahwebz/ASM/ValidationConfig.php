@@ -1,18 +1,41 @@
 <?php
 
+namespace Intahwebz\ASM;
+
 
 class ValidationConfig {
 
-    private $useragentChanged;
-    private $ipChanged;
-    private $invalidSession;
+    private $profileChanged;
+    private $zombieKeyAccessed;
+    private $invalidSessionAccessed;
 
-    function __construct(callable $useragentChanged = null,
-                         callable $ipChanged = null,
-                         callable $invalidSession = null) {
-        $this->useragentChanged = $useragentChanged;
-        $this->ipChanged = $ipChanged;
-        $this->invalidSession = $invalidSession;
+    function __construct(callable $profileChanged = null,
+                         callable $zombieKeyAccessed = null,
+                         callable $invalidSessionAccessed = null) {
+        $this->profileChanged = $profileChanged;
+        $this->zombieKeyAccessed = $zombieKeyAccessed;
+        $this->invalidSessionAccessed = $invalidSessionAccessed;
+    }
+
+    /**
+     * @return callable
+     */
+    public function getInvalidSessionAccessed() {
+        return $this->invalidSessionAccessed;
+    }
+
+    /**
+     * @return callable
+     */
+    public function getProfileChanged() {
+        return $this->profileChanged;
+    }
+
+    /**
+     * @return callable
+     */
+    public function getZombieKeyAccessed() {
+        return $this->zombieKeyAccessed;
     }
 }
 
