@@ -2,26 +2,40 @@
 
 namespace Intahwebz\ASM;
 
+use Predis\Client as RedisClient;
+
 
 class SessionManager {
 
-    function __construct(SessionConfig $sessionConfig) {
+    /**
+     * @var SessionConfig
+     */
+    private $sessionConfig;
+
+    /**
+     * @var \Predis\Client
+     */
+    private $redisClient;
+    
+    function __construct(SessionConfig $sessionConfig, RedisClient $redisClient) {
+        \Intahwebz\ASM\Functions::load();
         $this->sessionConfig = $sessionConfig;
+        $this->redisClient = $redisClient;
     }
 
     function destroyExpiredSessions() {
         
     }
 
-    function createSession(
-        SessionConfig $sessionConfig,
-        $openMode,
-        $cookieData) {
-        return new Session($sessionConfig, $openMode, $cookieData);
-    }
+//    function createSession(
+//        SessionConfig $sessionConfig,
+//        $openMode,
+//        $cookieData) {
+//        return new Session($sessionConfig, $openMode, $cookieData);
+//    }
 
     function deleteSession($sessionID) {
-        
+        deleteAllRelatedRedisInfo($sessionID, $this->redisClient);
     }
 }
 

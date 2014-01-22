@@ -27,10 +27,6 @@ class SessionProfile {
     public function getUserAgent() {
         return $this->userAgent;
     }
-    
-    
-    
-    
 }
 
 

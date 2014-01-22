@@ -1,5 +1,8 @@
 <?php
 
+
+
+
 namespace Intahwebz\ASM {
     
     class Functions {
@@ -11,6 +14,38 @@ namespace Intahwebz\ASM {
 
 
 namespace {
+
+    use Predis\Client as RedisClient;
+
+
+function generateRedisDataKey($sessionID) {
+    return 'session:'.$sessionID;
+}
+
+function generateZombieKey($dyingSessionID) {
+    return 'zombie:'.$dyingSessionID;
+}
+
+function generateLockKey($sessionID) {
+    return 'session:'.$sessionID.':lock';
+}
+
+function generateProfileKey($sessionID) {
+    return 'session:'.$sessionID.':profile';
+}
+
+
+function generateAsyncKey($sessionID) {
+    return 'session:'.$sessionID.':async';
+}
+
+function deleteAllRelatedRedisInfo($sessionID, RedisClient $redisClient) {
+    $dataKey = generateRedisDataKey($sessionID);
+    $redisClient->del($dataKey);
+}
+
+
+
 
 
 /**

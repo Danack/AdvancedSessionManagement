@@ -205,6 +205,42 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $session3 = $this->createSecondSession($session1, $validationConfig, $sessionProfile3);
     }
     
+    
+    function testInvalidSessionCalled() {
+        $mockCookies2 = array();
+        $mockCookies2['SessionTest'] = "I_Dont_Exist";
+
+        $redisClient2 = new RedisClient($this->redisConfig, $this->redisOptions);
+
+        $invalidCallbackCalled = false;
+
+        $invalidCallback = function (Session $session, SessionProfile $newProfile = null) use (&$invalidCallbackCalled) {
+            $invalidCallbackCalled = true;
+        };
+
+        $validationConfig = new ValidationConfig(null, null, $invalidCallback);
+        $session2 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookies2, $redisClient2, $validationConfig);
+
+        $session2->start();
+
+        $this->assertTrue($invalidCallbackCalled, "Callable for an invalid sessionID was not called.");
+    }
+    
+    
+    function testAsync() {
+
+        $session1 = $this->createEmptySession();
+        $session2 = $this->createSecondSession($session1);
+        $session1->asyncIncrement('upload');
+        $value1 = $session2->asyncGet('upload');
+        $this->assertEquals(1, $value1);
+        
+        $session1->asyncSet('percentComplete', '50');
+        $value2 = $session2->asyncGet('percentComplete');
+        $this->assertEquals('50', $value2);
+
+    }
+
 }
 
  

@@ -10,7 +10,7 @@ class Session {
 
     const READ_ONLY = 'READ_ONLY';
     const WRITE_LOCK = 'WRITE_LOCK';
-    
+
     const CACHE_SKIP                = 'skip';
     const CACHE_PUBLIC              = 'public';
     const CACHE_PRIVATE             = 'private';
@@ -99,7 +99,7 @@ END;
         $zombieTime = $this->sessionConfig->getZombieTime();
         
         if ($zombieTime > 0) {
-            $zombieKey = $this->generateZombieKey($this->sessionID);
+            $zombieKey = generateZombieKey($this->sessionID);
 
             //TODO - Need to think about possibility for session hijacking here?
             $this->redis->set(
@@ -113,7 +113,7 @@ END;
         //any possibility for a race condition.
         
         //TODO - need to rename all the metadata keys.
-        $this->redis->rename($this->generateRedisDataKey(), $this->generateRedisDataKey($newSessionID));
+        $this->redis->rename(generateRedisDataKey($this->sessionID), generateRedisDataKey($newSessionID));
         
         //TODO - do as a redis transaction
         
@@ -202,14 +202,18 @@ END;
     function close($discard = false) {
         //TODO - add a compare
         $dataModified = true;
-        
-        if ($dataModified == true) {
-            $this->saveAllData();
+
+        //TODO - check any lock is closed.
+
+        if (!$discard) {
+            if ($dataModified == true) {
+                $this->saveAllData();
+            }
         }
     }
 
     function mapZombieIDToRegeneratedID() {
-        $zombieKeyName = $this->generateZombieKey($this->sessionID);
+        $zombieKeyName = generateZombieKey($this->sessionID);
         $regeneratedSessionID = $this->redis->get($zombieKeyName);
 
         if ($regeneratedSessionID) {
@@ -221,32 +225,9 @@ END;
         return null;
     }
 
-    function generateZombieKey($dyingSessionID) {
-        return 'zombie:'.$dyingSessionID;
-    }
-
-    function generateRedisDataKey($newSessionID = null) {
-        if ($newSessionID == null) {
-            return 'session:'.$this->sessionID;
-        }
-        return 'session:'.$newSessionID;
-    }
-
-    function generateLockKey() {
-        return 'session:'.$this->sessionID.':lock';
-    }
-
-    function generateHistoryKey() {
-        return 'session:'.$this->sessionID.':history';
-    }
-
-    function generateProfileKey() {
-        return 'session:'.$this->sessionID.':profile';
-    }
-    
 
     function loadData() {
-        $newData = $this->redis->hgetall($this->generateRedisDataKey());
+        $newData = $this->redis->hgetall(generateRedisDataKey($this->sessionID));
         
         if ($newData == null) {
             //No session data was available. Check to see if there is a mapping
@@ -255,7 +236,7 @@ END;
             
             if ($regeneratedID) {
                 $this->sessionID = $regeneratedID;
-                $newData = $this->redis->hgetall($this->generateRedisDataKey());
+                $newData = $this->redis->hgetall(generateRedisDataKey($this->sessionID));
             }
             else {
                 //Session id was not valid, and was not mapped from a zombie key to a live
@@ -282,16 +263,16 @@ END;
         if (count($saveData) == 0) {
             //Redis can't save empty hashes. Either need to delete the key or
             //do magic.
-            $this->redis->del($this->generateRedisDataKey());
+            $this->redis->del(generateRedisDataKey($this->sessionID));
         }
         else {
-            $this->redis->hmset($this->generateRedisDataKey(), $saveData);
+            $this->redis->hmset(generateRedisDataKey($this->sessionID), $saveData);
         }
     }
 
 
     function acquireLock() {
-        $this->lockKey = $this->generateLockKey();
+        $this->lockKey = generateLockKey($this->sessionID);
         $this->lockNumber = rand();
 
         $totalTimeWaitedForLock = 0;
@@ -364,11 +345,22 @@ END;
      * 
      */
     function forceReleaseLock() {
-        $this->lockKey = $this->generateLockKey();
+        $this->lockKey = generateLockKey($this->sessionID);
         $this->redis->del($this->lockKey);
     }
 
     function invalidKeyAccessed() {
+        if (!$this->validationConfig) {
+            return;
+        }
+
+        $invalidSessionAccessed = $this->validationConfig->getInvalidSessionAccessed();
+
+        if (!$invalidSessionAccessed) {
+            return;
+        }
+
+        call_user_func($invalidSessionAccessed, $this, $this->sessionProfile);
     }
 
     function zombieKeyDetected() {
@@ -395,7 +387,7 @@ END;
             return;
         }
 
-        $profileKey = $this->generateProfileKey();
+        $profileKey = generateProfileKey($this->sessionID);
         $profileDataArray = $this->redis->lrange($profileKey, 0, -1);
 
         $profileObjectArray = array();
@@ -413,9 +405,27 @@ END;
      */
     function addProfile() {
         if ($this->sessionProfile) {
-            $profileKey = $this->generateProfileKey();
+            $profileKey = generateProfileKey($this->sessionID);
             $profileData = serialize($this->sessionProfile);
             $this->redis->rpush($profileKey, $profileData);
         }
+    }
+
+    function asyncIncrement($hashKey, $increment = 1) {
+        $key = generateAsyncKey($this->sessionID);
+
+        return $this->redis->hincrby($key, $hashKey, $increment);
+    }
+    
+    function asyncGet($hashKey) {
+        $key = generateAsyncKey($this->sessionID);
+
+        return $this->redis->hget($key, $hashKey);
+    }
+
+    function asyncSet($hashKey, $value) {
+        $key = generateAsyncKey($this->sessionID);
+
+        return $this->redis->hset($key, $hashKey, $value);
     }
 }
