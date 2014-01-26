@@ -2,18 +2,14 @@
 
 require_once('../../vendor/autoload.php');
 
-//use Predis\Client as RedisClient;
-//use Predis\Client as RedisClient;
 
+echo "<a href='/'>Home</a> <br/>";
 
 $redis = new \Predis\Client(array("host" => '127.0.0.1'));
 
 $info = $redis->info();
 
 foreach ($info as $key => $value){
-
-    
-    
     if (is_array($value)) {
 
         echo "<h3>$key </h3>" ;

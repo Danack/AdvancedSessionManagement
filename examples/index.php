@@ -5,12 +5,14 @@
 <?php
 
 $examples = array(
-    'session/index.html' => "First test",
-    'session/frame1.php' => "Frame 1",
-    'session/frame2.php' => "Frame 2",
-    'session/clear.php' => "Clear session",
-    'session/lockAndRelease.php' => "Lock testing",
-    'session/info.php' => "Redis info",
+    'async/append.html' => "Async append",
+    'async/increment.html' => "Async increment",
+    'async/set.html' => "Async set",
+//    'session/frame1.php' => "Frame 1",
+//    'session/frame2.php' => "Frame 2",
+    'clear.php' => "Clear session",
+    'lockAndRelease.php' => "Lock testing",
+    'info.php' => "Redis info",
 );
 
 

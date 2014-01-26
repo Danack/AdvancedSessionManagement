@@ -8,7 +8,8 @@ use Intahwebz\ASM\SessionConfig;
 
 use Predis\Client as RedisClient;
 
-
+define('ASYNC_INC_KEY', 'ASYNC_INC_KEY');
+define('ASYNC_SET_KEY', 'ASYNC_SET_KEY');
 
 $sessionConfig = new SessionConfig(
     'SessionTest', 
@@ -25,7 +26,6 @@ $redisParameters = array(
 $redisOptions = array(
     'profile' => '2.6'
 );
-
 
 
 $redisClient = new RedisClient($redisParameters, $redisOptions);

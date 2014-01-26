@@ -34,18 +34,20 @@ function generateProfileKey($sessionID) {
     return 'session:'.$sessionID.':profile';
 }
 
+function generateAsyncKey($sessionID, $index = null) {
+    $key = 'session:'.$sessionID.':async';
 
-function generateAsyncKey($sessionID) {
-    return 'session:'.$sessionID.':async';
+    if ($index !== null) {
+        $key .= $index;
+    }
+    
+    return $key;
 }
 
 function deleteAllRelatedRedisInfo($sessionID, RedisClient $redisClient) {
     $dataKey = generateRedisDataKey($sessionID);
     $redisClient->del($dataKey);
 }
-
-
-
 
 
 /**

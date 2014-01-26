@@ -30,6 +30,11 @@ class Session {
     
     private $lockNumber;
 
+    /**
+     * @var \Predis\Client
+     */
+    private $redis;
+
     const unlockScript = <<< END
 if redis.call("get",KEYS[1]) == ARGV[1]
 then
@@ -37,6 +42,10 @@ then
 else
     return 0
 end
+END;
+    
+    const appendScript = <<< END
+
 END;
 
     const lockSleepTime = 1000;
@@ -309,9 +318,7 @@ END;
 
 
     function releaseLock() {
-
         $keysRemoved = $this->redis->eval(self::unlockScript, 1, $this->lockKey, $this->lockNumber);
-
         $lockReleased = true;
         
         if (!$keysRemoved) {
@@ -411,21 +418,38 @@ END;
         }
     }
 
-    function asyncIncrement($hashKey, $increment = 1) {
+    function asyncGet($index) {
         $key = generateAsyncKey($this->sessionID);
 
-        return $this->redis->hincrby($key, $hashKey, $increment);
-    }
-    
-    function asyncGet($hashKey) {
-        $key = generateAsyncKey($this->sessionID);
-
-        return $this->redis->hget($key, $hashKey);
+        return $this->redis->hget($key, $index);
     }
 
-    function asyncSet($hashKey, $value) {
+    function asyncSet($index, $value) {
         $key = generateAsyncKey($this->sessionID);
 
-        return $this->redis->hset($key, $hashKey, $value);
+        return $this->redis->hset($key, $index, $value);
+    }
+
+    function asyncIncrement($index, $increment = 1) {
+        $key = generateAsyncKey($this->sessionID);
+
+        return $this->redis->hincrby($key, $index, $increment);
+    }
+
+    function asyncGetList($index) {
+        $key = generateAsyncKey($this->sessionID, $index);
+        $list = $this->redis->lrange($key, 0, -1);
+
+        return $list;
+    }
+
+    function asyncAppendToList($index, $value) {
+        $key = generateAsyncKey($this->sessionID, $index);
+        return $this->redis->rpush($key, [$value]);
+    }
+
+    function asyncClearList($index) {
+        $key = generateAsyncKey($this->sessionID, $index);
+        return $this->redis->del($key);
     }
 }

@@ -2,6 +2,7 @@
 
 require_once('bootstrap.php');
 
+echo "<a href='/'>Home</a> <br/>";
 
 try {
     $sessionData = $session->openSession();

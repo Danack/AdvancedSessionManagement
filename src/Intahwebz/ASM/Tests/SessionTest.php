@@ -225,22 +225,6 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
 
         $this->assertTrue($invalidCallbackCalled, "Callable for an invalid sessionID was not called.");
     }
-    
-    
-    function testAsync() {
-
-        $session1 = $this->createEmptySession();
-        $session2 = $this->createSecondSession($session1);
-        $session1->asyncIncrement('upload');
-        $value1 = $session2->asyncGet('upload');
-        $this->assertEquals(1, $value1);
-        
-        $session1->asyncSet('percentComplete', '50');
-        $value2 = $session2->asyncGet('percentComplete');
-        $this->assertEquals('50', $value2);
-
-    }
-
 }
 
  
