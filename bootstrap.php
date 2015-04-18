@@ -1,8 +1,38 @@
 <?php
 
-
+//Bootstrap for tests.
 
 require_once('./vendor/autoload.php');
+
+
+function maskAndCompareIPAddresses($ipAddress1, $ipAddress2, $maskBits) {
+
+    $ipAddress1 = ip2long($ipAddress1);
+    $ipAddress2 = ip2long($ipAddress2);
+
+    $mask = (1<<(32 - $maskBits));
+
+    if (($ipAddress1 & $mask) == ($ipAddress2 & $mask)) {
+        return true;
+    }
+
+    return false;
+}
+
+function extractCookie($header) {
+    if (stripos($header, 'Set-Cookie') === 0) {
+        $matches = array();
+        $regex = "/Set-Cookie: (\w*)=(\w*);.*/";
+        $count = preg_match($regex, $header, $matches, PREG_OFFSET_CAPTURE);
+
+        if ($count == 1) {
+            return array($matches[1][0] => $matches[2][0]);
+        }
+    }
+
+    return null;
+}
+
 
 
 /**
