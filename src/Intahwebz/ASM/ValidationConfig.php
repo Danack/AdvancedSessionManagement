@@ -27,7 +27,7 @@ class ValidationConfig {
     /**
      * @return callable
      */
-    public function getProfileChanged() {
+    public function getProfileChangedCallable() {
         return $this->profileChanged;
     }
 

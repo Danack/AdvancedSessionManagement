@@ -27,6 +27,8 @@ class SessionManagerTest extends \PHPUnit_Framework_TestCase {
 
 
     /**
+     * @param \Intahwebz\ASM\ValidationConfig $validationConfig
+     * @param \Intahwebz\ASM\SessionProfile $sessionProfile
      * @return Session
      */
     function createEmptySession(ValidationConfig $validationConfig = null, SessionProfile $sessionProfile = null) {

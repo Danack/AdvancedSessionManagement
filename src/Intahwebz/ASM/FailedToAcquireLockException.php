@@ -4,8 +4,6 @@
 namespace Intahwebz\ASM;
 
 
-class FailedToAcquireLockException extends \Exception {
-
-}
+class FailedToAcquireLockException extends \Exception {}
 
  

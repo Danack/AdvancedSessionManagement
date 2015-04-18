@@ -30,6 +30,13 @@ class Session {
     
     private $lockNumber;
 
+
+    /**
+     * @var boolean Whether this session thinks it has a lock. It may not be accurate if another proces
+     * has force released the lock.
+     */
+    private $lockAcquired;
+
     /**
      * @var \Predis\Client
      */
@@ -42,10 +49,6 @@ then
 else
     return 0
 end
-END;
-    
-    const appendScript = <<< END
-
 END;
 
     const lockSleepTime = 1000;
@@ -100,7 +103,7 @@ END;
     }
     
     function makeSessionKey() {
-        return rand();
+        return rand(100000000, 999999999);
     }
     
     function regenerateSessionID() {
@@ -134,13 +137,18 @@ END;
      */
     function clear() {
         $this->sessionData = array();
-        $this->saveAllData();
+        $this->saveData();
     }
 
     /**
      * @return array
      */
-    function openSession() {
+    private function openSession() {
+
+        if ($this->sessionConfig->getLockMode() == SessionConfig::LOCK_ON_OPEN) {
+            $this->acquireLock();
+        }
+        
         $this->loadData();
 
         if ($this->sessionData) {
@@ -170,20 +178,6 @@ END;
     }
 
     /**
-     * @param $index
-     * @param $value
-     * @return mixed
-     */
-    function append($index, $value) {
-        $this->sessionData[$index][] = $value;
-
-        $this->saveAllData();
-        $this->loadData();
-
-        return $this->sessionData;
-    }
-
-    /**
      * @return mixed
      */
     function getData() {
@@ -208,33 +202,40 @@ END;
     }
 
 
+    /**
+     * @param bool $discard If true the session is closed and any data modifications are discarded.
+     */
     function close($discard = false) {
         //TODO - add a compare
         $dataModified = true;
 
-        //TODO - check any lock is closed.
-
         if (!$discard) {
+            //Only write back if required.
             if ($dataModified == true) {
-                $this->saveAllData();
+                $this->saveData();
             }
+        }
+
+        if ($this->lockAcquired == true) {
+            $this->releaseLock();
         }
     }
 
+
+    /**
+     * @return null|string
+     */
     function mapZombieIDToRegeneratedID() {
         $zombieKeyName = generateZombieKey($this->sessionID);
         $regeneratedSessionID = $this->redis->get($zombieKeyName);
 
-        if ($regeneratedSessionID) {
-            $this->zombieKeyDetected();
-
-            return $regeneratedSessionID;
-        }
-
-        return null;
+        return $regeneratedSessionID;
     }
 
 
+    /**
+     * Load the session data from storage.
+     */
     function loadData() {
         $newData = $this->redis->hgetall(generateRedisDataKey($this->sessionID));
         
@@ -244,6 +245,10 @@ END;
             $regeneratedID = $this->mapZombieIDToRegeneratedID();
             
             if ($regeneratedID) {
+                //The user is trying to use a recently re-generated key.
+
+                $this->zombieKeyDetected();
+                
                 $this->sessionID = $regeneratedID;
                 $newData = $this->redis->hgetall(generateRedisDataKey($this->sessionID));
             }
@@ -262,8 +267,24 @@ END;
 
         $this->sessionData = $newVersion;
     }
+
+    private function zombieKeyDetected() { 
+
+        if (!$this->validationConfig) {
+            return;
+        }
+        
+        $zombieKeyAccessedCallable = $this->validationConfig->getZombieKeyAccessed();
+
+        if (!$zombieKeyAccessedCallable) {
+            return;
+        }
+
+        call_user_func($zombieKeyAccessedCallable, $this, $this->sessionProfile);
+    }
     
-    function saveAllData() {
+    
+    function saveData() {
         $saveData = array();
         foreach ($this->sessionData as $key => $value) {
             $raw = serialize($value);
@@ -279,10 +300,14 @@ END;
         }
     }
 
-
     function acquireLock() {
         $this->lockKey = generateLockKey($this->sessionID);
         $this->lockNumber = rand();
+        
+        if ($this->lockAcquired) {
+            trigger_error('Acquiring lock when already acquired', E_USER_ERROR);
+            return;
+        }
 
         $totalTimeWaitedForLock = 0;
 
@@ -295,7 +320,7 @@ END;
             );
 
             if ($set == null) {
-                throw new FailedToAcquireLockException("Failed to acquire lock for session data, lockKey already exists.");
+                throw new FailedToAcquireLockException("Failed to acquire lock for session data, lockKey ".$this->lockKey." already exists.");
             }
 
             if ($set != "OK") {
@@ -303,7 +328,7 @@ END;
             }
 
             if ($totalTimeWaitedForLock >= $this->sessionConfig->getMaxLockWaitTime()) {
-                throw new FailedToAcquireLockException("Failed to acquire lock for session data.");
+                throw new FailedToAcquireLockException("Failed to acquire lock for session data after time $totalTimeWaitedForLock ");
             }
             
             if (!$set) {
@@ -313,6 +338,8 @@ END;
             $totalTimeWaitedForLock += self::lockSleepTime;
             
         } while(!$set);
+        
+        $this->lockAcquired = true;
     }
     
 
@@ -327,6 +354,8 @@ END;
             $this->processLockWasAlreadyReleased();
             $lockReleased = false;
         }
+        
+        $this->lockAcquired = false;
 
         return $lockReleased;
     }
@@ -352,10 +381,14 @@ END;
      * 
      */
     function forceReleaseLock() {
+        //TODO - should this only be callable after the session is started?
         $this->lockKey = generateLockKey($this->sessionID);
         $this->redis->del($this->lockKey);
     }
 
+    /**
+     * 
+     */
     function invalidKeyAccessed() {
         if (!$this->validationConfig) {
             return;
@@ -370,14 +403,17 @@ END;
         call_user_func($invalidSessionAccessed, $this, $this->sessionProfile);
     }
 
-    function zombieKeyDetected() {
-    }
-    
+    /**
+     * 
+     */
     function processLockWasAlreadyReleased() {
     }
 
+    /**
+     * 
+     */
     function performSecurityCheck() {
-        //get past 
+        
     }
 
     function performProfileSecurityCheck() {
@@ -389,7 +425,7 @@ END;
             return;
         }
 
-        $profileChangedCallable = $this->validationConfig->getProfileChanged();
+        $profileChangedCallable = $this->validationConfig->getProfileChangedCallable();
         if (!$profileChangedCallable) {
             return;
         }

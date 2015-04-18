@@ -4,6 +4,9 @@ namespace Intahwebz\ASM;
 
 class SessionConfig {
 
+    const LOCK_ON_OPEN = 'LOCK_ON_OPEN';
+    const LOCK_ON_WRITE = 'LOCK_ON_WRITE';
+    const LOCK_MANUALLY = 'LOCK_MANUALLY';
 
     private $lifetime;
     private $zombieTime;
@@ -18,14 +21,16 @@ class SessionConfig {
         $sessionName,
         $lifetime,
         $zombieTime,
+        $lockMode = self::LOCK_ON_OPEN,
         $lockTimeInMilliseconds = 30000
-        
     ) {
         $this->lifetime = $lifetime;
         $this->zombieTime = $zombieTime;
         $this->sessionName = $sessionName;
-        $this->lockMilliSeconds = $lockTimeInMilliseconds;
+        $this->lockMode = $lockMode;
         
+        $this->lockMilliSeconds = $lockTimeInMilliseconds;
+
         //Time in microseconds
         $this->maxLockWaitTime = 5000000;
 
@@ -66,6 +71,13 @@ class SessionConfig {
 
     function getMaxLockWaitTime() {
         return $this->maxLockWaitTime;
+    }
+
+    /**
+     * @return string
+     */
+    function getLockMode() {
+        return $this->lockMode;
     }
 }
 

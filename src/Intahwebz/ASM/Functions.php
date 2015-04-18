@@ -34,6 +34,11 @@ function generateProfileKey($sessionID) {
     return 'session:'.$sessionID.':profile';
 }
 
+/**
+ * @param $sessionID
+ * @param null $index
+ * @return string
+ */
 function generateAsyncKey($sessionID, $index = null) {
     $key = 'session:'.$sessionID.':async';
 
