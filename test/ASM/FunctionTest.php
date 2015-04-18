@@ -4,7 +4,7 @@ class FunctionTest extends \PHPUnit_Framework_TestCase {
 
     protected function setUp() {
         //$provider = createProvider();
-        \Intahwebz\ASM\Functions::load();
+        \ASM\Functions::load();
     }
 
 

@@ -1,18 +1,18 @@
 <?php
 
 
-namespace Intahwebz\ASM\Tests;
+namespace ASM\Tests;
 
-use Intahwebz\ASM\Session;
-use Intahwebz\ASM\SessionConfig;
-use Intahwebz\ASM\SessionProfile;
-use Intahwebz\ASM\ValidationConfig;
+use ASM\Session;
+use ASM\SessionConfig;
+use ASM\SessionManager;
+use ASM\SessionProfile;
+use ASM\ValidationConfig;
 
 use Predis\Client as RedisClient;
 
 
-
-class SessionAsyncTest extends \PHPUnit_Framework_TestCase {
+class SessionManagerTest extends \PHPUnit_Framework_TestCase {
 
     /**
      * @var \Auryn\Provider
@@ -27,6 +27,8 @@ class SessionAsyncTest extends \PHPUnit_Framework_TestCase {
 
 
     /**
+     * @param \ASM\ValidationConfig $validationConfig
+     * @param \ASM\SessionProfile $sessionProfile
      * @return Session
      */
     function createEmptySession(ValidationConfig $validationConfig = null, SessionProfile $sessionProfile = null) {
@@ -72,36 +74,29 @@ class SessionAsyncTest extends \PHPUnit_Framework_TestCase {
             'profile' => '2.6',
             'prefix' => 'sessionTest:',
         );
+
+        //$session = $this->provider->make(\ASM\Session::class);        
+        //$this->provider->share($sessionConfig);
     }
 
-  
-    function testAsyncIncrement() {
+    function testDeleteSession() {
 
         $session1 = $this->createEmptySession();
-        $session2 = $this->createSecondSession($session1);
-        $session1->asyncIncrement('upload');
-        $value1 = $session2->asyncGet('upload');
-        $this->assertEquals(1, $value1);
+        $sessionData = $session1->getData();
+        $sessionData['foo'] = 'bar';
+        $session1->setData($sessionData);
+        $session1->close();
+
+        $redisClient = new RedisClient($this->redisConfig, $this->redisOptions);
         
-        $session1->asyncSet('percentComplete', '50');
-        $value2 = $session2->asyncGet('percentComplete');
-        $this->assertEquals('50', $value2);
-    }
+        $sessionManager = new SessionManager($this->sessionConfig, $redisClient);
+        $sessionManager->deleteSession($session1->getSessionID());
 
-
-    function testAsyncList() {
-        $session1 = $this->createEmptySession();
         $session2 = $this->createSecondSession($session1);
-        $list = 'foo';
-        $session1->asyncAppendToList($list, 'bar');
-        $result = $session2->asyncGetList($list);
-        $this->assertCount(1, $result);
-        $this->assertEquals('bar', $result[0]);
+        $readSessionData = $session2->getData();
 
-        $session1->asyncClearList($list);
-
-        $result = $session2->asyncGetList($list);
-        $this->assertEmpty($result);
+        $this->assertEmpty($readSessionData);
     }
+
 
 }

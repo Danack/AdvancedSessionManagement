@@ -1,6 +1,6 @@
 <?php
 
-namespace Intahwebz\ASM;
+namespace ASM;
 
 use Predis\Client as RedisClient;
 
@@ -18,7 +18,7 @@ class SessionManager {
     private $redisClient;
     
     function __construct(SessionConfig $sessionConfig, RedisClient $redisClient) {
-        \Intahwebz\ASM\Functions::load();
+        \ASM\Functions::load();
         $this->sessionConfig = $sessionConfig;
         $this->redisClient = $redisClient;
     }

@@ -1,12 +1,12 @@
 <?php
 
 
-namespace Intahwebz\ASM\Tests;
+namespace ASM\Tests;
 
-use Intahwebz\ASM\Session;
-use Intahwebz\ASM\SessionConfig;
-use Intahwebz\ASM\SessionProfile;
-use Intahwebz\ASM\ValidationConfig;
+use ASM\Session;
+use ASM\SessionConfig;
+use ASM\SessionProfile;
+use ASM\ValidationConfig;
 
 use Predis\Client as RedisClient;
 
@@ -21,7 +21,7 @@ class SessionCustomBehaviourTest extends \PHPUnit_Framework_TestCase {
     private $provider;
 
     /**
-     * @var \Intahwebz\ASM\SessionConfig
+     * @var \ASM\SessionConfig
      */
     private $sessionConfig;
 
@@ -29,35 +29,6 @@ class SessionCustomBehaviourTest extends \PHPUnit_Framework_TestCase {
     
     private $redisOptions;
 
-
-    /**
-     * @param \Intahwebz\ASM\ValidationConfig $validationConfig
-     * @param \Intahwebz\ASM\SessionProfile $sessionProfile
-     * @return Session
-     */
-    function createEmptySession(ValidationConfig $validationConfig = null, SessionProfile $sessionProfile = null) {
-
-        $redisClient1 = new RedisClient($this->redisConfig, $this->redisOptions);
-        $mockCookie = array();
-        $session1 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookie, $redisClient1, $validationConfig, $sessionProfile);
-        $session1->start();
-
-        return $session1;
-    }
-
-
-    function createSecondSession(Session $session1, ValidationConfig $validationConfig = null,SessionProfile $sessionProfile = null) {
-        $cookie = extractCookie($session1->getHeader());
-        $this->assertNotNull($cookie);
-        $redisClient2 = new RedisClient($this->redisConfig, $this->redisOptions);
-        $mockCookies2 = array_merge(array(), $cookie);
-        $session2 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookies2, $redisClient2, $validationConfig, $sessionProfile);
-
-        $session2->start();
-
-        return $session2;
-    }
-    
 
     protected function setUp() {
         $this->provider = createProvider();
@@ -80,6 +51,44 @@ class SessionCustomBehaviourTest extends \PHPUnit_Framework_TestCase {
         );
     }
     
+    
+    /**
+     * @param \ASM\ValidationConfig $validationConfig
+     * @param \ASM\SessionProfile $sessionProfile
+     * @return Session
+     */
+    function createEmptySession(ValidationConfig $validationConfig = null, SessionProfile $sessionProfile = null) {
+
+        $redisClient1 = new RedisClient($this->redisConfig, $this->redisOptions);
+        $mockCookie = array();
+        $session1 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookie, $redisClient1, $validationConfig, $sessionProfile);
+        $session1->start();
+
+        return $session1;
+    }
+
+    /**
+     * @param Session $session1
+     * @param ValidationConfig $validationConfig
+     * @param SessionProfile $sessionProfile
+     * @return Session
+     */
+    function createSecondSession(Session $session1, ValidationConfig $validationConfig = null,SessionProfile $sessionProfile = null) {
+        $cookie = extractCookie($session1->getHeader());
+        $this->assertNotNull($cookie);
+        $redisClient2 = new RedisClient($this->redisConfig, $this->redisOptions);
+        $mockCookies2 = array_merge(array(), $cookie);
+        $session2 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookies2, $redisClient2, $validationConfig, $sessionProfile);
+
+        $session2->start();
+
+        return $session2;
+    }
+
+
+    /**
+     * 
+     */
     function testZombieSessionRegeneration() {
         $session1 = $this->createEmptySession();
         $cookie = extractCookie($session1->getHeader());
@@ -103,7 +112,9 @@ class SessionCustomBehaviourTest extends \PHPUnit_Framework_TestCase {
         $this->assertEquals($readSessionData['testKey'], 'testValue');
     }
 
-
+    /**
+     * 
+     */
     function testZombieSessionDetected() {
         $session1 = $this->createEmptySession();
         $cookie = extractCookie($session1->getHeader());
@@ -144,9 +155,11 @@ class SessionCustomBehaviourTest extends \PHPUnit_Framework_TestCase {
 
         $this->assertTrue($zombieDetectedCallback, "Callable for a zombie session detection was not called.");
     }
-    
-    
 
+
+    /**
+     * 
+     */
     function testChangedUserAgentCallsProfileChanged() {
 
 //        $userAgent1 = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.63 Safari/537.36";
@@ -185,8 +198,10 @@ class SessionCustomBehaviourTest extends \PHPUnit_Framework_TestCase {
 //        $this->createSecondSession($session1, $validationConfig, $sessionProfile3);
 
     }
-    
-    
+
+    /**
+     * 
+     */
     function testInvalidSessionCalled() {
         $mockCookies2 = array();
         $mockCookies2['SessionTest'] = "This_Does_not_Exist";

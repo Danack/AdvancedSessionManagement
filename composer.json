@@ -9,24 +9,23 @@
         }
     ],
 
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/Danack/Auryn"
-        }
-    ],
-
     "require-dev": {
-        "rdlowrey/auryn": "dev-PluginExperiment2",
-        "phpunit/phpunit": "3.7.*"
+        "phpunit/phpunit": "4.1.3",
+        "rdlowrey/auryn": "^0.14.2"
     },
 
     "require": {
-        "predis/predis": "dev-v0.9/phpdoc-method-tags as v0.9"
+        "predis/predis": "1.0.1"
     },
     "autoload": {
         "psr-0": {
-            "Intahwebz\\ASM": "src/"
+            "ASM": "lib/"
+        },
+        "files": ["lib/ASM/Functions.php"]
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.0.x-dev"
         }
     }
 }

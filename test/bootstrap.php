@@ -2,8 +2,27 @@
 
 //Bootstrap for tests.
 
-require_once('./vendor/autoload.php');
+require_once(__DIR__.'/../vendor/autoload.php');
 
+
+function getRedisConfig() {
+    $redisConfig = array(
+        "scheme" => "tcp",
+        "host" => '127.0.0.1',
+        "port" => 6379
+    );
+
+    return $redisConfig;
+}
+
+function getRedisOptions() {
+    $redisOptions = array(
+        'profile' => '2.6',
+        'prefix' => 'sessionTest:',
+    );
+
+    return $redisOptions;
+}
 
 function maskAndCompareIPAddresses($ipAddress1, $ipAddress2, $maskBits) {
 
@@ -41,8 +60,6 @@ function extractCookie($header) {
  * @return \Auryn\Provider
  */
 function createProvider($mocks = array(), $shares = array()) {
-
-    \Intahwebz\ASM\Functions::load();
 
     $standardImplementations = [
         //'Intahwebz\Session' => Intahwebz\Session\MockSession::class,

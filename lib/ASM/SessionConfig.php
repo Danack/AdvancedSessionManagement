@@ -1,6 +1,6 @@
 <?php
 
-namespace Intahwebz\ASM;
+namespace ASM;
 
 class SessionConfig {
 

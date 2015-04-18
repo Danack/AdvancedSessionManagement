@@ -1,12 +1,12 @@
 <?php
 
 
-namespace Intahwebz\ASM\Tests;
+namespace ASM\Tests;
 
-use Intahwebz\ASM\Session;
-use Intahwebz\ASM\SessionConfig;
-use Intahwebz\ASM\SessionProfile;
-use Intahwebz\ASM\ValidationConfig;
+use ASM\Session;
+use ASM\SessionConfig;
+use ASM\SessionProfile;
+use ASM\ValidationConfig;
 
 use Predis\Client as RedisClient;
 
@@ -26,8 +26,8 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
 
 
     /**
-     * @param \Intahwebz\ASM\ValidationConfig $validationConfig
-     * @param \Intahwebz\ASM\SessionProfile $sessionProfile
+     * @param \ASM\ValidationConfig $validationConfig
+     * @param \ASM\SessionProfile $sessionProfile
      * @return Session
      */
     function createEmptySession(ValidationConfig $validationConfig = null, SessionProfile $sessionProfile = null) {
@@ -74,7 +74,7 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
             'prefix' => 'sessionTest:',
         );
 
-        //$session = $this->provider->make(\Intahwebz\ASM\Session::class);        
+        //$session = $this->provider->make(\ASM\Session::class);        
         //$this->provider->share($sessionConfig);
     }
 

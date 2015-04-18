@@ -1,6 +1,6 @@
 <?php
 
-namespace Intahwebz\ASM;
+namespace ASM;
 
 use Predis\Client as RedisClient;
 
@@ -65,7 +65,7 @@ END;
         ValidationConfig $validationConfig = null,
         SessionProfile $sessionProfile = null
     ) {
-        \Intahwebz\ASM\Functions::load();
+        \ASM\Functions::load();
         $this->sessionConfig = $sessionConfig;
         $this->redis = $redisClient;
         $this->validationConfig = $validationConfig;

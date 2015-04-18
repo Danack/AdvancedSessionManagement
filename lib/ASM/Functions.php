@@ -3,7 +3,7 @@
 
 
 
-namespace Intahwebz\ASM {
+namespace ASM {
     
     class Functions {
         static function load(){
@@ -77,11 +77,11 @@ function getCacheHeaders($caching, $expireTime, $lastModifiedTime = null) {
 
     switch($caching) {
 
-        case(\Intahwebz\ASM\Session::CACHE_SKIP): {
+        case(\ASM\Session::CACHE_SKIP): {
             //nothing to do, why is the user even calling this function?
             break;
         }
-        case(\Intahwebz\ASM\Session::CACHE_PUBLIC): {
+        case(\ASM\Session::CACHE_PUBLIC): {
             $headers[] = "Expires: ".$expireDate;
             $headers[] = "Cache-Control: public, max-age=".$maxAgeTime;
             if ($lastModifiedDate) {
@@ -89,7 +89,7 @@ function getCacheHeaders($caching, $expireTime, $lastModifiedTime = null) {
             }
             break;
         }
-        case(\Intahwebz\ASM\Session::CACHE_PRIVATE): {
+        case(\ASM\Session::CACHE_PRIVATE): {
             $headers[] = "Expires: ".$expireDate;
             $headers[] = "Cache-Control: private, max-age=".$maxAgeTime." pre-check=".$maxAgeTime;
             if ($lastModifiedDate) {
@@ -97,14 +97,14 @@ function getCacheHeaders($caching, $expireTime, $lastModifiedTime = null) {
             }
             break;
         }
-        case(\Intahwebz\ASM\Session::CACHE_PRIVATE_NO_EXPIRE): {
+        case(\ASM\Session::CACHE_PRIVATE_NO_EXPIRE): {
             $headers[] = "Cache-Control: private, max-age=".$maxAgeTime." pre-check=".$maxAgeTime;
             if ($lastModifiedDate) {
                 $headers[] = "Last-Modified: ".$lastModifiedDate;
             }
             break;
         }
-        case(\Intahwebz\ASM\Session::CACHE_NO_CACHE): {
+        case(\ASM\Session::CACHE_NO_CACHE): {
             $headers[] = "Expires: ".$expireDate;
             $headers[] = "Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0";
             $headers[] = "Pragma: no-cache";
@@ -117,7 +117,18 @@ function getCacheHeaders($caching, $expireTime, $lastModifiedTime = null) {
 
     return $headers;
 }
-    
+
+/**
+ * @param $time
+ * @param $sessionName
+ * @param $sessionID
+ * @param $lifetime
+ * @param null $path
+ * @param bool $domain
+ * @param bool $secure
+ * @param bool $httpOnly
+ * @return string
+ */
 function generateCookieHeader($time, $sessionName, $sessionID, $lifetime, $path = null, $domain = false, $secure = false, $httpOnly = true) {
 
     $COOKIE_SET_COOKIE = "Set-Cookie: ";

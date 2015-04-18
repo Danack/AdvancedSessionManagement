@@ -1,7 +1,7 @@
 <?php
 
 
-namespace Intahwebz\ASM;
+namespace ASM;
 
 
 class FailedToAcquireLockException extends \Exception {}
