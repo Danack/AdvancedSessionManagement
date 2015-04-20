@@ -8,7 +8,7 @@ require_once(__DIR__.'/../vendor/autoload.php');
 function getRedisConfig() {
     $redisConfig = array(
         "scheme" => "tcp",
-        "host" => '127.0.0.1',
+        "host" => 'localhost',
         "port" => 6379
     );
 
@@ -18,7 +18,7 @@ function getRedisConfig() {
 function getRedisOptions() {
     $redisOptions = array(
         'profile' => '2.6',
-        'prefix' => 'sessionTest:',
+        'prefix' => 'sessionTest'.date("Ymdhis").':',
     );
 
     return $redisOptions;

@@ -15,44 +15,8 @@ namespace ASM {
 
 namespace {
 
-    use Predis\Client as RedisClient;
 
 
-function generateRedisDataKey($sessionID) {
-    return 'session:'.$sessionID;
-}
-
-function generateZombieKey($dyingSessionID) {
-    return 'zombie:'.$dyingSessionID;
-}
-
-function generateLockKey($sessionID) {
-    return 'session:'.$sessionID.':lock';
-}
-
-function generateProfileKey($sessionID) {
-    return 'session:'.$sessionID.':profile';
-}
-
-/**
- * @param $sessionID
- * @param null $index
- * @return string
- */
-function generateAsyncKey($sessionID, $index = null) {
-    $key = 'session:'.$sessionID.':async';
-
-    if ($index !== null) {
-        $key .= $index;
-    }
-    
-    return $key;
-}
-
-function deleteAllRelatedRedisInfo($sessionID, RedisClient $redisClient) {
-    $dataKey = generateRedisDataKey($sessionID);
-    $redisClient->del($dataKey);
-}
 
 
 /**

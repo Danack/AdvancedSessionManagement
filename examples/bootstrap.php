@@ -3,9 +3,8 @@
 require_once('../../vendor/autoload.php');
 
 
-use Intahwebz\ASM\Session;
-use Intahwebz\ASM\SessionConfig;
-
+use ASM\Session;
+use ASM\SessionConfig;
 use Predis\Client as RedisClient;
 
 define('ASYNC_INC_KEY', 'ASYNC_INC_KEY');

@@ -1,6 +1,99 @@
 # Advanced session management
 
 
+## Terminology
+
+
+### UserProfile
+
+A UserProfile is a string that holds some information about the computer that is accessing the session. For example the computers IP address and useragent.
+
+When the session is accessed, the user-profile for the current request is checked against the user-profiles that have already been used to access the session. If they are not identical, the profileChanged callable is called.
+ 
+This can be used to detect and prevent an attacker from being able to access the session, even if they know the session ID. The implementation of the profileChanged callable must be supplied by the programmer who is using this library.
+
+For websites that are just showing pictures of funny cats, this security check could be very lax, or completely missing.
+
+For banks or other websites where security is paramount
+
+
+
+### Zombie Session
+
+[Session fixation](https://www.owasp.org/index.php/Session_fixation) is an attack where a 3rd party manages to figure out someone's session id, and can spoof.
+ 
+These attacks can be limited by using Session::regenerateSessionID, which generates a new session ID for the legitimate user. However that causes a problem when multiple requests arrive in a short amount of time.
+ 
+For example, a user browses to your website, opens 3 tabs pointing to different pages.  
+
+
+### Driver
+
+ASM can use several backend storage systems, the code that provide hese are called 'drivers'. Currently, the Redis and filesystem drivers have been implemented. Pull requests for drivers for other storage systems are very welcome.
+
+
+### Locking
+
+
+* Lock on open - 
+
+* Lock on write - 
+
+
+
+## Callbacks
+
+
+### Profile changed
+
+
+function profileChanged(\Asm\Session $session, $newProfile, $previousProfiles) {
+    if (isProfileChangeAllowed($newProfile, $previousProfiles) == false) {
+        throw new UserDefinedException("Profile is too different.");
+    }
+
+    $previousProfiles[] = $newProfile;
+    
+    return $previousProfiles;
+}
+
+### Zombie key accessed
+
+Called when a user attempts to use a session ID that is actually now a zombie ID. 
+
+function zombieKeyAccessed(\Asm\Session $session) {
+
+}
+
+### Invalid session accessed
+
+Called when a user attempts to use a session ID that is invalid. This would be useful for preventing flood attacks where someone is making a large number of requests in an attempt to guess a session ID
+
+function invalidSessionAccessed(\Asm\Session $session) {
+
+}
+
+### Session Lost Lock 
+
+In some circumstances the lock on the session data can be lost.
+
+function lostLockCallable(\Asm\Session $session) {
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ## Goals

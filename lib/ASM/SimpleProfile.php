@@ -3,7 +3,7 @@
 namespace ASM;
 
 
-class SessionProfile {
+class SimpleProfile {
 
     private $ipAddress;
 
@@ -26,6 +26,17 @@ class SessionProfile {
      */
     public function getUserAgent() {
         return $this->userAgent;
+    }
+
+    /**
+     * @return string
+     */
+    public function __toString() {
+        $data = [];
+        $data['ipAddress'] = $this->ipAddress;
+        $data['userAgent'] = $this->userAgent;
+
+        return json_encode($data);
     }
 }
 

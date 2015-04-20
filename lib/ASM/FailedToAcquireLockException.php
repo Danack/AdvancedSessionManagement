@@ -4,6 +4,6 @@
 namespace ASM;
 
 
-class FailedToAcquireLockException extends \Exception {}
+class FailedToAcquireLockException extends AsmException {}
 
  

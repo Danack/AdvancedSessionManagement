@@ -2,8 +2,7 @@
 
 namespace ASM;
 
-use Predis\Client as RedisClient;
-
+use ASM\Driver\Driver as SessionDriver;
 
 
 class Session {
@@ -22,67 +21,68 @@ class Session {
     /**
      * @var SessionConfig
      */
-    private $sessionConfig;
-
-    private $sessionID = null;
-
-    private $lockKey;
-    
-    private $lockNumber;
-
+    protected $sessionConfig;
 
     /**
-     * @var boolean Whether this session thinks it has a lock. It may not be accurate if another proces
-     * has force released the lock.
+     * @var null 
      */
-    private $lockAcquired;
+    protected $sessionID = null;
 
     /**
-     * @var \Predis\Client
+     * @var \ASM\Driver\RedisDriver
      */
-    private $redis;
+    protected $driver;
 
-    const unlockScript = <<< END
-if redis.call("get",KEYS[1]) == ARGV[1]
-then
-    return redis.call("del",KEYS[1])
-else
-    return 0
-end
-END;
-
+    /**
+     * 
+     */
     const lockSleepTime = 1000;
 
-    private $sessionProfile;
-
+    /**
+     * @var
+     */
     private $cookieData;
 
+    /**
+     * @param SessionConfig $sessionConfig
+     * @param $openMode
+     * @param $cookieData
+     * @param SessionDriver $driver
+     * @param ValidationConfig $validationConfig
+     */
     function __construct(
         SessionConfig $sessionConfig, 
         $openMode, 
         $cookieData,
-        RedisClient $redisClient,
-        ValidationConfig $validationConfig = null,
-        SessionProfile $sessionProfile = null
+        SessionDriver $driver,
+        ValidationConfig $validationConfig = null
     ) {
-        \ASM\Functions::load();
         $this->sessionConfig = $sessionConfig;
-        $this->redis = $redisClient;
-        $this->validationConfig = $validationConfig;
-        $this->sessionProfile = $sessionProfile;
+        $this->driver = $driver;
         $this->cookieData = $cookieData;
+
+        if ($validationConfig) {
+            $this->validationConfig = $validationConfig;
+        }
+        else {
+            $this->validationConfig = new ValidationConfig(
+                null,
+                null,
+                null
+            );
+        }
     }
 
     /**
      * 
      */
-    function start() {
+    public function openSession($userProfile = null) {
         $existingSessionOpened = false;
 
         if (isset($this->cookieData[$this->sessionConfig->getSessionName()])) {
             $this->sessionID = $this->cookieData[$this->sessionConfig->getSessionName()];
             //Only start the session automatically, if the user sent us a cookie.
-            $existingSessionOpened = $this->openSession();
+            $existingSessionOpened = $this->readSessionData();
         }
         else {
             $this->sessionID = $this->makeSessionKey();
@@ -90,107 +90,89 @@ END;
         }
         
         if ($existingSessionOpened == true) {
-            $this->performProfileSecurityCheck();
+            $this->performProfileSecurityCheck($userProfile);
         }
         else {
             //Record new ip address
-            $this->addProfile();
+            if ($userProfile != null) {
+                $this->addProfile($userProfile);
+            }
         }
     }
 
-    function getSessionID() {
+
+    /**
+     * 
+     */
+    public function close() {
+
+    }
+    
+    
+    
+    /**
+     * @return array
+     */
+    public function readSessionData() {
+        if ($this->sessionConfig->getLockMode() == SessionConfig::LOCK_ON_OPEN) {
+            $this->acquireLock();
+        }
+
+        $sessionData = $this->loadData();
+
+        return $sessionData;
+//        
+//        if ($this->sessionData) {
+//            return true;
+//        }
+//
+//        //No session data was found
+//        $this->invalidKeyAccessed();
+//
+//        return false;
+    }
+
+
+
+    /**
+     * @return null
+     */
+    public function getSessionID() {
         return $this->sessionID;
     }
-    
-    function makeSessionKey() {
+
+    /**
+     * @return int
+     */
+    private function makeSessionKey() {
+        //TODO - understand what is required of a real session ID generator.
         return rand(100000000, 999999999);
     }
-    
+
+    /**
+     * 
+     */
     function regenerateSessionID() {
         $newSessionID = $this->makeSessionKey();
         $zombieTime = $this->sessionConfig->getZombieTime();
         
         if ($zombieTime > 0) {
-            $zombieKey = generateZombieKey($this->sessionID);
-
-            //TODO - Need to think about possibility for session hijacking here?
-            $this->redis->set(
-                $zombieKey, 
-                $newSessionID, 
-                'EX', $this->sessionConfig->getZombieTime()
+            $this->driver->setupZombieID(
+                $this->sessionID,
+                $newSessionID,
+                $this->sessionConfig->getZombieTime()
             );
         }
 
-        //TODO - combine this operation with the setting of the zombie key to avoid 
-        //any possibility for a race condition.
-        
-        //TODO - need to rename all the metadata keys.
-        $this->redis->rename(generateRedisDataKey($this->sessionID), generateRedisDataKey($newSessionID));
-        
-        //TODO - do as a redis transaction
-        
         $this->sessionID = $newSessionID;
     }
 
-    /**
-     * Deletes all data in the session.
-     */
-    function clear() {
-        $this->sessionData = array();
-        $this->saveData();
-    }
-
-    /**
-     * @return array
-     */
-    private function openSession() {
-
-        if ($this->sessionConfig->getLockMode() == SessionConfig::LOCK_ON_OPEN) {
-            $this->acquireLock();
-        }
-        
-        $this->loadData();
-
-        if ($this->sessionData) {
-            return true;
-        }
-
-        //No session data was 
-        $this->invalidKeyAccessed();
-        $this->sessionData = array();
-
-        return false;
-    }
-
-    /**
-     * @param $data
-     */
-    function setData($data) {
-        $this->sessionData = $data;
-    }
-
-    /**
-     * @param $index
-     * @param $value
-     */
-    function set($index, $value) {
-        $this->sessionData[$index] = $value;
-    }
-
-    /**
-     * @return mixed
-     */
-    function getData() {
-        return $this->sessionData;
-    }
 
     /**
      * @return string
      */
     function getHeader() {
-
         $lifetime = $this->sessionConfig->getLifetime();
-
         $cookieHeader = generateCookieHeader(
             time(),
             $this->sessionConfig->getSessionName(),
@@ -203,176 +185,125 @@ END;
 
 
     /**
-     * @param bool $discard If true the session is closed and any data modifications are discarded.
-     */
-    function close($discard = false) {
-        //TODO - add a compare
-        $dataModified = true;
-
-        if (!$discard) {
-            //Only write back if required.
-            if ($dataModified == true) {
-                $this->saveData();
-            }
-        }
-
-        if ($this->lockAcquired == true) {
-            $this->releaseLock();
-        }
-    }
-
-
-    /**
-     * @return null|string
-     */
-    function mapZombieIDToRegeneratedID() {
-        $zombieKeyName = generateZombieKey($this->sessionID);
-        $regeneratedSessionID = $this->redis->get($zombieKeyName);
-
-        return $regeneratedSessionID;
-    }
-
-
-    /**
      * Load the session data from storage.
      */
     function loadData() {
-        $newData = $this->redis->hgetall(generateRedisDataKey($this->sessionID));
-        
-        if ($newData == null) {
-            //No session data was available. Check to see if there is a mapping
-            //for a zombie key to an active session key
-            $regeneratedID = $this->mapZombieIDToRegeneratedID();
-            
-            if ($regeneratedID) {
-                //The user is trying to use a recently re-generated key.
+        $maxLoops = 5;
+        $newData = null;
 
-                $this->zombieKeyDetected();
-                
-                $this->sessionID = $regeneratedID;
-                $newData = $this->redis->hgetall(generateRedisDataKey($this->sessionID));
-            }
-            else {
-                //Session id was not valid, and was not mapped from a zombie key to a live
-                //key. Therefore it's a totally dead key.
-                $this->invalidKeyAccessed();
+        for ($i=0 ; $i<$maxLoops ; $i++) {
+            $newData = $this->driver->getData($this->sessionID);
+
+            if ($newData == null) {
+                //No session data was available. Check to see if there is a mapping
+                //for a zombie key to an active session key
+                $regeneratedID = $this->driver->findSessionIDFromZombieID($this->sessionID);
+
+                if ($regeneratedID) {
+                    //The user is trying to use a recently re-generated key.
+                    $this->zombieKeyDetected();
+                    $this->sessionID = $regeneratedID;
+                    $newData = $this->driver->getData($this->sessionID);
+                }
+                else {
+                    //Session id was not valid, and was not mapped from a zombie key to a live
+                    //key. Therefore it's a totally dead key.
+                    $this->invalidKeyAccessed();
+                    return null;
+                }
             }
         }
 
-        $newVersion = array();
-        foreach ($newData as $key => $value) {
-            $raw = unserialize($value);
-            $newVersion[$key] = $raw;
-        }
-
-        $this->sessionData = $newVersion;
+        return $newData;
     }
 
+    /**
+     * A zombie key was detected. If the user
+     */
     private function zombieKeyDetected() { 
-
-        if (!$this->validationConfig) {
-            return;
-        }
-        
-        $zombieKeyAccessedCallable = $this->validationConfig->getZombieKeyAccessed();
+        $zombieKeyAccessedCallable = $this->validationConfig->getZombieKeyAccessedCallable();
 
         if (!$zombieKeyAccessedCallable) {
             return;
         }
 
-        call_user_func($zombieKeyAccessedCallable, $this, $this->sessionProfile);
-    }
-    
-    
-    function saveData() {
-        $saveData = array();
-        foreach ($this->sessionData as $key => $value) {
-            $raw = serialize($value);
-            $saveData[$key] = $raw;
-        }
-        if (count($saveData) == 0) {
-            //Redis can't save empty hashes. Either need to delete the key or
-            //do magic.
-            $this->redis->del(generateRedisDataKey($this->sessionID));
-        }
-        else {
-            $this->redis->hmset(generateRedisDataKey($this->sessionID), $saveData);
-        }
+        call_user_func($zombieKeyAccessedCallable, $this);
     }
 
-    function acquireLock() {
-        $this->lockKey = generateLockKey($this->sessionID);
-        $this->lockNumber = rand();
-        
-        if ($this->lockAcquired) {
-            trigger_error('Acquiring lock when already acquired', E_USER_ERROR);
-            return;
-        }
-
-        $totalTimeWaitedForLock = 0;
-
-        do {
-            $set = $this->redis->set(
-                $this->lockKey,
-                $this->lockNumber,
-                'PX', $this->sessionConfig->getLockMilliSeconds(),
-                'NX'
-            );
-
-            if ($set == null) {
-                throw new FailedToAcquireLockException("Failed to acquire lock for session data, lockKey ".$this->lockKey." already exists.");
-            }
-
-            if ($set != "OK") {
-                throw new FailedToAcquireLockException("Failed to acquire lock for session data with unknown reason");
-            }
-
-            if ($totalTimeWaitedForLock >= $this->sessionConfig->getMaxLockWaitTime()) {
-                throw new FailedToAcquireLockException("Failed to acquire lock for session data after time $totalTimeWaitedForLock ");
-            }
-            
-            if (!$set) {
-                usleep(self::lockSleepTime); //Wait one millisecond
-            }
-            
-            $totalTimeWaitedForLock += self::lockSleepTime;
-            
-        } while(!$set);
-        
-        $this->lockAcquired = true;
-    }
-    
-
-
-    function releaseLock() {
-        $keysRemoved = $this->redis->eval(self::unlockScript, 1, $this->lockKey, $this->lockNumber);
-        $lockReleased = true;
-        
-        if (!$keysRemoved) {
-            //lock was force removed by a different script, or this script went over $this->sessionConfig->lockTime
-            //Either way - bad things are likely to happen
-            $this->processLockWasAlreadyReleased();
-            $lockReleased = false;
-        }
-        
-        $this->lockAcquired = false;
-
-        return $lockReleased;
+    /**
+     * 
+     */
+    public function saveData($saveData) {
+        $this->driver->save($this->sessionID, $saveData);
     }
 
     /**
      * @throws FailedToAcquireLockException
      */
-    function renewLock() {
-        $set = $this->redis->executeRaw([
-            'SET',
-            $this->lockKey,
-            $this->lockNumber,
-            'PX', $this->sessionConfig->getLockMilliSeconds(),
-            'XX'
-        ]);
+    function acquireLock() {
+        $totalTimeWaitedForLock = 0;
 
-        if (!$set) {
+        do {
+            $lockAcquired = $this->driver->acquireLock(
+                $this->sessionID,
+                $this->sessionConfig->getLockMilliSeconds()
+            );
+
+            if ($totalTimeWaitedForLock >= $this->sessionConfig->getMaxLockWaitTimeMilliseconds()) {
+                throw new FailedToAcquireLockException("Failed to acquire lock for session data after time $totalTimeWaitedForLock ");
+            }
+            
+            if (!$lockAcquired) {
+                //Wait one millisecond to prevent hammering driver.
+                //TODO - change to random sleep time?
+                usleep(self::lockSleepTime); 
+            }
+            
+            $totalTimeWaitedForLock += self::lockSleepTime;
+            
+        } while(!$lockAcquired);
+    }
+
+
+    /**
+     * @return bool
+     * @throws LockAlreadyReleasedException
+     */
+    function releaseLock() {
+        $lockReleased = $this->driver->releaseLock();
+        
+        if (!$lockReleased) {
+            // lock was force removed by a different script, or this script went over
+            // the $this->sessionConfig->lockTime Either way - bad things are likely to happen
+            $lostLockCallable = $this->validationConfig->getLockWasForceReleasedCallable();
+            $continueExecution = false;
+            if ($lostLockCallable) {
+                $continueExecution = call_user_func($lostLockCallable, $this);
+            }
+
+            if ($continueExecution === true) {
+                return false;
+            }
+
+            throw new LockAlreadyReleasedException("The lock for the session has already been released.");
+        }
+        
+        return true;
+    }
+
+    /**
+     * Renews a lock. This allows long running operations to keep a lock open longer
+     * than the SessionConfig::$lockMilliSeconds time. If the lock fails to be renewed
+     * an exception is thrown. This can happen when another process force releases a 
+     * lock.
+     * @throws FailedToAcquireLockException
+     */
+    function renewLock() {
+        $renewed = $this->driver->renewLock(
+            $this->sessionConfig->getLockMilliSeconds()
+        );
+
+        if (!$renewed) {
             throw new FailedToAcquireLockException("Failed to renew lock.");
         }
     }
@@ -382,47 +313,33 @@ END;
      */
     function forceReleaseLock() {
         //TODO - should this only be callable after the session is started?
-        $this->lockKey = generateLockKey($this->sessionID);
-        $this->redis->del($this->lockKey);
+        $this->driver->forceReleaseLock($this->sessionID);
     }
 
     /**
      * 
      */
     function invalidKeyAccessed() {
-        if (!$this->validationConfig) {
-            return;
-        }
-
-        $invalidSessionAccessed = $this->validationConfig->getInvalidSessionAccessed();
+        $invalidSessionAccessed = $this->validationConfig->getInvalidSessionAccessedCallable();
 
         if (!$invalidSessionAccessed) {
             return;
         }
 
-        call_user_func($invalidSessionAccessed, $this, $this->sessionProfile);
+        call_user_func($invalidSessionAccessed, $this);
     }
 
     /**
      * 
      */
-    function processLockWasAlreadyReleased() {
-    }
-
-    /**
-     * 
-     */
-    function performSecurityCheck() {
-        
-    }
-
-    function performProfileSecurityCheck() {
-        if (!$this->validationConfig) {
+    function performProfileSecurityCheck($userProfile) {
+        if ($userProfile === null) {
             return;
         }
 
-        if (!$this->sessionProfile) {
-            return;
+        if (is_string($userProfile) == false &&
+            (!(is_object($userProfile) && method_exists($userProfile, '__toString')))) {
+            throw new AsmException("userProfile must be a string or an object containing a __toString method.");
         }
 
         $profileChangedCallable = $this->validationConfig->getProfileChangedCallable();
@@ -430,62 +347,31 @@ END;
             return;
         }
 
-        $profileKey = generateProfileKey($this->sessionID);
-        $profileDataArray = $this->redis->lrange($profileKey, 0, -1);
-
-        $profileObjectArray = array();
+        $sessionProfiles = $this->driver->getStoredProfile($this->sessionID);
+        $knownProfile = false;
         
-        foreach ($profileDataArray as $profileData) {
-            $profileObject = unserialize($profileData);
-            $profileObjectArray[] = $profileObject;
+        foreach ($sessionProfiles as $sessionProfile) {
+            if ($userProfile === $sessionProfile) {
+                $knownProfile = true;
+                break;
+            }
         }
-
-        call_user_func($profileChangedCallable, $this, $this->sessionProfile, $profileObjectArray);
+        
+        if ($knownProfile == false) {
+            $newProfiles = call_user_func($profileChangedCallable, $this, $userProfile, $sessionProfiles);
+            
+            if (is_array($newProfiles) == false) {
+                throw new AsmException("The profileChangedCallable must return an array of the allowed session profiles, but instead a ".gettype($newProfiles)."was returned");
+            }
+            
+            $this->driver->storeSessionProfiles($newProfiles);
+        }
     }
 
     /**
      * Add session profile to the approved session profile list
      */
-    function addProfile() {
-        if ($this->sessionProfile) {
-            $profileKey = generateProfileKey($this->sessionID);
-            $profileData = serialize($this->sessionProfile);
-            $this->redis->rpush($profileKey, $profileData);
-        }
-    }
-
-    function asyncGet($index) {
-        $key = generateAsyncKey($this->sessionID);
-
-        return $this->redis->hget($key, $index);
-    }
-
-    function asyncSet($index, $value) {
-        $key = generateAsyncKey($this->sessionID);
-
-        return $this->redis->hset($key, $index, $value);
-    }
-
-    function asyncIncrement($index, $increment = 1) {
-        $key = generateAsyncKey($this->sessionID);
-
-        return $this->redis->hincrby($key, $index, $increment);
-    }
-
-    function asyncGetList($index) {
-        $key = generateAsyncKey($this->sessionID, $index);
-        $list = $this->redis->lrange($key, 0, -1);
-
-        return $list;
-    }
-
-    function asyncAppendToList($index, $value) {
-        $key = generateAsyncKey($this->sessionID, $index);
-        return $this->redis->rpush($key, [$value]);
-    }
-
-    function asyncClearList($index) {
-        $key = generateAsyncKey($this->sessionID, $index);
-        return $this->redis->del($key);
+    function addProfile($sessionProfile) {
+        $this->driver->addProfile($this->sessionID, $sessionProfile);
     }
 }

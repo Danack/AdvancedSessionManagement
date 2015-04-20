@@ -3,7 +3,7 @@
 require_once('../bootstrap.php');
 
 try {
-    $sessionData = $session->openSession();
+    $sessionData = $session->start();
 
     header($session->getHeader());
 
