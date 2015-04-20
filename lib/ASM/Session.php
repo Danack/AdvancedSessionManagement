@@ -246,7 +246,8 @@ class Session {
         do {
             $lockAcquired = $this->driver->acquireLock(
                 $this->sessionID,
-                $this->sessionConfig->getLockMilliSeconds()
+                $this->sessionConfig->getLockMilliSeconds(),
+                $this->sessionConfig->getMaxLockWaitTimeMilliseconds()
             );
 
             if ($totalTimeWaitedForLock >= $this->sessionConfig->getMaxLockWaitTimeMilliseconds()) {
@@ -270,7 +271,7 @@ class Session {
      * @throws LockAlreadyReleasedException
      */
     function releaseLock() {
-        $lockReleased = $this->driver->releaseLock();
+        $lockReleased = $this->driver->releaseLock($this->sessionID);
         
         if (!$lockReleased) {
             // lock was force removed by a different script, or this script went over
@@ -300,6 +301,7 @@ class Session {
      */
     function renewLock() {
         $renewed = $this->driver->renewLock(
+            $this->sessionID,
             $this->sessionConfig->getLockMilliSeconds()
         );
 
@@ -364,7 +366,10 @@ class Session {
                 throw new AsmException("The profileChangedCallable must return an array of the allowed session profiles, but instead a ".gettype($newProfiles)."was returned");
             }
             
-            $this->driver->storeSessionProfiles($newProfiles);
+            $this->driver->storeSessionProfiles(
+                $this->sessionID,
+                $newProfiles
+            );
         }
     }
 

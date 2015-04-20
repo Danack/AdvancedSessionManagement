@@ -8,8 +8,6 @@ use ASM\SessionConfig;
 use ASM\SimpleProfile;
 use ASM\ValidationConfig;
 
-use Predis\Client as RedisClient;
-
 
 
 

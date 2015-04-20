@@ -281,7 +281,7 @@ END;
      * @return bool
      * @throws FailedToAcquireLockException
      */
-    function acquireLock($sessionID, $milliseconds) {
+    function acquireLock($sessionID, $lockTimeMS, $acquireTimeoutMS) {
         $lockKey = generateLockKey($sessionID);
         //TODO - change to actual random numbers.
         $lockRandomNumber = "".rand(100000000, 100000000000);
@@ -290,7 +290,7 @@ END;
             $lockKey,
             $lockRandomNumber,
             'PX',
-            $milliseconds,
+            $lockTimeMS,
             'NX'
         );
 

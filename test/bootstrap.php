@@ -18,7 +18,7 @@ function getRedisConfig() {
 function getRedisOptions() {
     $redisOptions = array(
         'profile' => '2.6',
-        'prefix' => 'sessionTest'.date("Ymdhis").':',
+        'prefix' => 'sessionTest'.date("Ymdhis").uniqid().':',
     );
 
     return $redisOptions;

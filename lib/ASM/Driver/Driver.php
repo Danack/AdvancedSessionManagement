@@ -11,7 +11,7 @@ interface Driver {
      * @param $sessionID
      * @param $milliseconds
      */
-    function acquireLock($sessionID, $milliseconds);
+    function acquireLock($sessionID, $lockTimeMS, $acquireTimeoutMS);
 
     /**
      * @param $sessionID

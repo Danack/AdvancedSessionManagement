@@ -1,5 +1,7 @@
 <?php
 
+namespace ASM\Tests;
+
 class FunctionTest extends \PHPUnit_Framework_TestCase {
 
     protected function setUp() {
