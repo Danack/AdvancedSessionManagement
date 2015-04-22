@@ -2,6 +2,8 @@
 
 namespace ASM\Driver;
 
+use ASM\Serializer;
+use ASM\IDGenerator;
 
 use ASM\AsmException;
 use ASM\FailedToAcquireLockException;
@@ -14,8 +16,22 @@ class FileDriver implements Driver {
     const PROFILES_FILE = 'profile_file';
     
     const DATA_FILE = 'data_file';
+    
+    const ZOMBIE_FILE = 'zombie_file';
 
     private $path;
+
+    /**
+     * @var Serializer
+     */
+    private $serializer;
+
+
+    /**
+     * @var IDGenerator
+     */
+    private $idGenerator;
+    
 
     /**
      * @var string This is random for each lock. It allows us to detect when another
@@ -23,32 +39,110 @@ class FileDriver implements Driver {
      */
     protected $lockContents = null;
 
-
-    protected $fileHandle = false;
+    /**
+     * @var bool
+     */
+    protected $fileHandle = null;
 
     /**
      * @param $path
+     * @param Serializer $serializer
+     * @param IDGenerator $idGenerator
      * @throws AsmException
      */
-    function __construct($path) {
+    function __construct($path, Serializer $serializer = null, IDGenerator $idGenerator = null) {
         if (strlen($path) == 0) {
             throw new AsmException("Filepath of '$path' not acceptable for storing sessions.");
         }
+
         $this->path = $path;
         
-        @mkdir($path, true);
+        if ($serializer) {
+            $this->serializer = $serializer;
+        }
+        else {
+            $this->serializer = new \ASM\PHPSerializer();
+        }
+
+        if ($idGenerator) {
+            $this->idGenerator = $idGenerator;
+        }
+        else {
+            $this->idGenerator = new \ASM\StandardIDGenerator();
+        }
     }
 
     /**
      * 
      */
     function __destruct() {
-        if ($this->fileHandle != false) {
+        if ($this->fileHandle != null) {
             fclose($this->fileHandle);
         }
         $this->fileHandle = null;
     }
     
+    
+    function close() {
+        //releaseLock
+    //    $this->__destruct();
+    }
+
+    /**
+     * Open an existing session. Returns either the session data or null if
+     * the session could not be found.
+     * @param $sessionID
+     * @return string|null
+     */
+    function openSession($sessionID) {
+        $filename = $this->generateFilename($sessionID, self::DATA_FILE);
+        $fileContents = @file_get_contents($filename);
+        if ($fileContents === false) {
+            return false;
+        }
+        
+        return $this->serializer->unserialize($fileContents);
+    }
+
+    /**
+     * @return array
+     * @throws AsmException
+     */
+    private function createNewSessionFile() {
+        $count = 10;
+        do {
+            $sessionID = $this->idGenerator->generateSessionID();
+            $filename = $this->generateFilename($sessionID, self::DATA_FILE);
+            //This only succeeds if the file doesn't already exist
+            $fileHandle = @fopen($filename, 'x+');
+            
+            if ($fileHandle != false) {
+                break;
+            }
+
+            $count++;
+            if ($count > 10) {
+                //TODO - improve conditions of when an exception is thrown
+                throw new AsmException("Failed to open a new session file.");
+            }
+        } while (1);
+        
+        return [$sessionID, $fileHandle];
+    }
+/**
+     * Create a new session.
+     * @return string The newly created session ID.
+     */
+    function createSession() {
+        list($sessionID, $fileHandle) = $this->createNewSessionFile();
+        $dataString = $this->serializer->serialize([]);
+        fwrite($fileHandle, $dataString);
+        $this->fileHandle = $fileHandle;
+
+        return $sessionID;
+    }
+
+
     /**
      * @param $sessionID
      * @param $type
@@ -70,6 +164,10 @@ class FileDriver implements Driver {
             case(self::DATA_FILE) : {
                 return $basename.".data";
             }
+
+            case(self::ZOMBIE_FILE): {
+                return $basename.".zombie";
+            }
         }
 
         throw new AsmException("Unknown session file type [$type]");
@@ -85,9 +183,9 @@ class FileDriver implements Driver {
         // Open the file for reading + writing . If the file does not exist,
         // it is created. If it exists, it is neither truncated (as opposed
         // to 'w'), nor the call to this function fails (as is the case with 'x').
-        $this->fileHandle = @fopen($filename, 'c+'); 
+        $fileHandle = @fopen($filename, 'c+'); 
 
-        if ($this->fileHandle === false) {
+        if ($fileHandle === false) {
             throw new AsmException("Failed top open '$filename' to acquire lock.");
         }
         
@@ -98,23 +196,25 @@ class FileDriver implements Driver {
 
         do {
             $wouldBlock = false;
-            $locked = flock($this->fileHandle, LOCK_EX|LOCK_NB, $wouldBlock);
+            $locked = flock($fileHandle, LOCK_EX|LOCK_NB, $wouldBlock);
 
             if ($locked) {
-                ftruncate($this->fileHandle, 0);
-                fwrite($this->fileHandle, $lockRandomNumber);
+                ftruncate($fileHandle, 0);
+                fwrite($fileHandle, $lockRandomNumber);
                 break;
             }
 
             usleep(1000); // sleep 1ms to avoid churning CPU
-            
+
             if ($giveUpTime < ((int)(microtime(true) * 1000))) {
+                fclose($fileHandle);
                 throw new FailedToAcquireLockException(
                     "FileDriver failed to acquire lock for session $sessionID"
                 );
             }
         } while($finished === false);
 
+        $this->fileHandle = $fileHandle;
         $this->lockContents = $lockRandomNumber;
     }
 
@@ -160,7 +260,7 @@ class FileDriver implements Driver {
      * @return boolean
      */
     function isLocked($sessionID) {
-        return (bool)($this->lockContents);
+        return (bool)($this->fileHandle);
     }
 
     /**
@@ -186,8 +286,11 @@ class FileDriver implements Driver {
      * @param $sessionID
      * @return mixed
      */
-    function findSessionIDFromZombieID($sessionID) {
-        // TODO: Implement findSessionIDFromZombieID() method.
+    function findSessionIDFromZombieID($zombieSessionID) {
+        $filename = $this->generateFilename($zombieSessionID, self::ZOMBIE_FILE);
+        $fileContents = @file_get_contents($filename);
+
+        return $fileContents;
     }
 
     /**
@@ -195,8 +298,26 @@ class FileDriver implements Driver {
      * @param $newSessionID
      * @param $zombieTimeMilliseconds
      */
-    function setupZombieID($dyingSessionID, $newSessionID, $zombieTimeMilliseconds) {
-        // TODO: Implement setupZombieID() method.
+    function setupZombieID($dyingSessionID, $zombieTimeMilliseconds) {
+        // TODO - this needs to be wrapped in a lock.
+        list($newSessionID, $newFileHandle) = $this->createNewSessionFile();
+        
+        fseek($this->fileHandle, 0);
+        stream_copy_to_stream($this->fileHandle, $newFileHandle);
+
+        $zombieFilename = $this->generateFilename($dyingSessionID, self::ZOMBIE_FILE);
+        file_put_contents($zombieFilename, "".$newSessionID."");
+
+        //TODO - rename profile 
+        
+        
+        // Store as temp variable so that $this->fileHandle is always a file 
+        // handle to a valid file.
+        $oldFileHandle = $this->fileHandle;
+        $this->fileHandle = $newFileHandle;
+        fclose($oldFileHandle);
+
+        return $newSessionID;
     }
 
     /**
@@ -205,8 +326,13 @@ class FileDriver implements Driver {
      */
     function save($sessionID, $saveData) {
         $filename = $this->generateFilename($sessionID, self::DATA_FILE);
-        file_put_contents($filename, $saveData);
+        
+        $dataString = $this->serializer->serialize($saveData);
+        
+        //TODO - This needs to be made atomic with rename?
+        file_put_contents($filename, $dataString);
     }
+
 
     /**
      * @return mixed

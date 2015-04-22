@@ -11,9 +11,12 @@ use org\bovigo\vfs\vfsStream,
 
 class FileDriverTest extends AbstractDriverTest {
     function getDriver() {
-        vfsStream::setup('sessionTest');
-        $path = vfsStream::url('sessionTest');
-        return $this->injector->make('ASM\Driver\FileDriver', [':path' => $path]);
+//        vfsStream::setup('sessionTest');
+//        $path = vfsStream::url('sessionTest');
+//        // this is showing errors
+//        //return $this->injector->make('ASM\Driver\FileDriver', [':path' => $path]);
+
+        return $this->injector->make('ASM\Driver\FileDriver', [':path' => "./sesstest"]);
     }
 }
 

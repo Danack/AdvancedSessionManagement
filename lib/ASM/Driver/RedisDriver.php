@@ -2,6 +2,8 @@
 
 namespace ASM\Driver;
 
+use ASM\Serializer;
+use ASM\IDGenerator;
 use ASM\FailedToAcquireLockException;
 use Predis\Client as RedisClient;
 
@@ -74,7 +76,17 @@ class RedisDriver implements ConcurrentDriver {
     protected $lockNumber;
 
 
-    //$this->redisKeyPrefix = 'session:';
+    /**
+     * @var Serializer
+     */
+    private $serializer;
+
+
+    /**
+     * @var IDGenerator
+     */
+    private $idGenerator;
+    
 
     /**
      * A redis lua script 
@@ -105,8 +117,50 @@ END;
      * 
      *
      */
-    function __construct(RedisClient $redisClient) {
+    function __construct(
+        RedisClient $redisClient,
+        Serializer $serializer = null,
+        IDGenerator $idGenerator = null)
+    {
         $this->redisClient = $redisClient;
+
+        if ($serializer) {
+            $this->serializer = $serializer;
+        }
+        else {
+            $this->serializer = new \ASM\PHPSerializer();
+        }
+
+        if ($idGenerator) {
+            $this->idGenerator = $idGenerator;
+        }
+        else {
+            $this->idGenerator = new \ASM\StandardIDGenerator();
+        }
+    }
+
+    
+
+    function close() {
+        //$this->__destruct();
+    }
+
+    /**
+     * Open an existing session. Returns either the session data or null if
+     * the session could not be found.
+     * @param $sessionID
+     * @return string|null
+     */
+    function openSession($sessionID) {
+        // TODO: Implement openSession() method.
+    }
+
+    /**
+     * Create a new session.
+     * @return string The newly created session ID.
+     */
+    function createSession() {
+        // TODO: Implement createSession() method.
     }
 
 
@@ -286,21 +340,28 @@ END;
         //TODO - change to actual random numbers.
         $lockRandomNumber = "".rand(100000000, 100000000000);
 
-        $set = $this->redisClient->set(
-            $lockKey,
-            $lockRandomNumber,
-            'PX',
-            $lockTimeMS,
-            'NX'
-        );
+        $finished = false;
 
-        if ($set == null) {
-            return false;
-        }
-
-        if ($set != "OK") {
-            return false;
-        }
+        $giveUpTime = ((int)(microtime(true) * 1000)) + $acquireTimeoutMS;
+        
+        do {
+            $set = $this->redisClient->set(
+                $lockKey,
+                $lockRandomNumber,
+                'PX',
+                $lockTimeMS,
+                'NX'
+            );
+            
+            if ($set == "OK") {
+                $finished = true;
+            }
+            else if ($giveUpTime < ((int)(microtime(true) * 1000))) {
+                throw new FailedToAcquireLockException(
+                    "FileDriver failed to acquire lock for session $sessionID"
+                );
+            }
+        } while($finished === false);
 
         $this->lockNumber = $lockRandomNumber;
 
@@ -352,7 +413,8 @@ END;
      * @param $zombieTimeMilliseconds
      * @return mixed|void
      */
-    function setupZombieID($dyingSessionID, $newSessionID, $zombieTimeMilliseconds) {
+    function setupZombieID($dyingSessionID,  $zombieTimeMilliseconds) {
+        $newSessionID = $sessionID = $this->idGenerator->generateSessionID();;
         $zombieKey = generateZombieKey($dyingSessionID);
         $this->redisClient->set(
             $zombieKey,
@@ -365,12 +427,13 @@ END;
         //any possibility for a race condition.
 
         //TODO - need to rename all the metadata keys.
+        // or maybe use RENAMENX ?
         $this->redisClient->rename(
             generateSessionDataKey($dyingSessionID),
             generateSessionDataKey($newSessionID)
         );
 
-        //TODO - do as a redis transaction
+        return $newSessionID;
     }
 
     /**

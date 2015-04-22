@@ -48,7 +48,33 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase {
     }
 
     
+    function testZombieFunctionality() {
+        $zombieTimeMilliseconds = 1000;
+        $driver1 = $this->getDriver();
+
+        $sessionID = $driver1->createSession();
+        $srcData = ['foo' => 'bar'];
+        $driver1->save($sessionID, $srcData);
+        $newSessionID = $driver1->setupZombieID($sessionID, $zombieTimeMilliseconds);
+        $driver1->close();
+
+        $driver2 = $this->getDriver();
+        
+        $foundSessionID = $driver2->findSessionIDFromZombieID($sessionID);
+        
+        $this->assertNotFalse($foundSessionID, "Failed to find any live sesssion.");
+        $this->assertEquals($newSessionID, $foundSessionID, "Zombie session ID '$sessionID' did not lead to new session ID '$newSessionID' instead got '$foundSessionID'. ");
+
+        $readData = $driver2->openSession($foundSessionID);
+        
+        
+        $this->assertEquals($srcData, $readData, "Data read for session $foundSessionID did not match expected values.");
+    }
     
+    
+    function testDeleteClearsEverything() {
+        //
+    }
 
 //    function renewLock($milliseconds);
 //
@@ -57,9 +83,9 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase {
 
 //    function forceReleaseLock($sessionID);
 //
-//    function findSessionIDFromZombieID($sessionID);
+//    function 
 //
-//    function setupZombieID($dyingSessionID, $newSessionID, $zombieTimeMilliseconds);
+//   
 //
 //    function save($sessionID, $saveData);
 //

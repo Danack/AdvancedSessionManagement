@@ -7,6 +7,30 @@ namespace ASM\Driver;
 interface Driver {
 
     /**
+     * Open an existing session. Returns either the session data or null if 
+     * the session could not be found.
+     * @param $sessionID
+     * @return string|false
+     */
+    function openSession($sessionID);
+
+    /**
+     * Create a new session.
+     * @return string The newly created session ID.
+     */
+    function createSession();
+
+    /**
+     * @param $sessionID
+     * @param string $saveData 
+     */
+    function save($sessionID, $saveData);
+
+    function close();
+    
+    //function getData($sessionID);
+
+    /**
      * Acquire a lock for the session
      * @param $sessionID
      * @param $milliseconds
@@ -47,23 +71,18 @@ interface Driver {
     function forceReleaseLock($sessionID);
 
     /**
-     * @param $sessionID
-     * @return mixed
-     */
-    function findSessionIDFromZombieID($sessionID);
-
-    /**
      * @param $dyingSessionID
      * @param $newSessionID
      * @param $zombieTimeMilliseconds
+     * @return string newSessionID
      */
-    function setupZombieID($dyingSessionID, $newSessionID, $zombieTimeMilliseconds);
+    function setupZombieID($dyingSessionID, $zombieTimeMilliseconds);
 
     /**
      * @param $sessionID
-     * @param $saveData
+     * @return mixed
      */
-    function save($sessionID, $saveData);
+    function findSessionIDFromZombieID($zombieSsessionID);
     
     /**
      * @return mixed

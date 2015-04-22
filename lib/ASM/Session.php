@@ -16,8 +16,6 @@ class Session {
     const CACHE_PRIVATE_NO_EXPIRE   = 'private_no_expire';
     const CACHE_NO_CACHE            = 'nocache';
 
-    private $sessionData;
-
     /**
      * @var SessionConfig
      */
@@ -74,30 +72,80 @@ class Session {
     }
 
     /**
+     * Opens an existing session.
+     *
+     * Opens and returns the data for an existing session, if and only if the
+     * client sent a valid existing session ID. Otherwise returns null.
      * 
+     * @param null $userProfile
+     * @return bool|null
+     * @throws AsmException
+     * @throws FailedToAcquireLockException
      */
     public function openSession($userProfile = null) {
-        $existingSessionOpened = false;
-
         if (isset($this->cookieData[$this->sessionConfig->getSessionName()])) {
-            $this->sessionID = $this->cookieData[$this->sessionConfig->getSessionName()];
-            //Only start the session automatically, if the user sent us a cookie.
-            $existingSessionOpened = $this->readSessionData();
+            return false;
         }
-        else {
-            $this->sessionID = $this->makeSessionKey();
-            $this->sessionData = array();
+
+        $sessionID = $this->cookieData[$this->sessionConfig->getSessionName()];
+        list($sessionID, $data) = $this->loadData($sessionID);
+
+        if ($sessionID == null) {
+            $this->invalidKeyAccessed();
+
+            return null;
+        }
+
+        if ($this->sessionConfig->getLockMode() == SessionConfig::LOCK_ON_OPEN) {
+            $this->acquireLock();
         }
         
-        if ($existingSessionOpened == true) {
-            $this->performProfileSecurityCheck($userProfile);
-        }
-        else {
-            //Record new ip address
-            if ($userProfile != null) {
-                $this->addProfile($userProfile);
+        // Existing session was opened
+        $this->performProfileSecurityCheck($userProfile);
+        $this->sessionID = $sessionID;
+
+        return $data;
+    }
+
+    /**
+     * Create a new session or open existing session.
+     *
+     * Opens and returns the data for an existing session, if and only if the
+     * client sent a valid existing session ID. Otherwise creates a new session.
+     * 
+     * @param $userProfile
+     * @return array
+     * @throws AsmException
+     * @throws FailedToAcquireLockException
+     */
+    function createSession($userProfile) {
+        if (isset($this->cookieData[$this->sessionConfig->getSessionName()])) {
+            $sessionID = $this->cookieData[$this->sessionConfig->getSessionName()];
+
+            list($sessionID, $data) = $this->loadData($sessionID);
+
+            if ($data != null) {
+                // Existing session was opened
+                $this->performProfileSecurityCheck($userProfile);
+                $this->sessionID = $sessionID;
+
+                if ($this->sessionConfig->getLockMode() == SessionConfig::LOCK_ON_OPEN) {
+                    $this->acquireLock();
+                }
+
+                return $data;
             }
+
+            $this->invalidKeyAccessed();
         }
+
+        $this->sessionID = $this->driver->createSession();
+        
+        if ($this->sessionConfig->getLockMode() == SessionConfig::LOCK_ON_OPEN) {
+            $this->acquireLock();
+        }
+
+        return [];
     }
 
 
@@ -107,29 +155,17 @@ class Session {
     public function close() {
 
     }
-    
-    
-    
+
+
     /**
      * @return array
      */
-    public function readSessionData() {
+    public function readSessionData($sessionID) {
         if ($this->sessionConfig->getLockMode() == SessionConfig::LOCK_ON_OPEN) {
             $this->acquireLock();
         }
 
-        $sessionData = $this->loadData();
-
-        return $sessionData;
-//        
-//        if ($this->sessionData) {
-//            return true;
-//        }
-//
-//        //No session data was found
-//        $this->invalidKeyAccessed();
-//
-//        return false;
+        return  $this->loadData($sessionID);
     }
 
 
@@ -187,34 +223,34 @@ class Session {
     /**
      * Load the session data from storage.
      */
-    function loadData() {
+    function loadData($sessionID) {
         $maxLoops = 5;
         $newData = null;
 
         for ($i=0 ; $i<$maxLoops ; $i++) {
-            $newData = $this->driver->getData($this->sessionID);
+            $newData = $this->driver->getData($sessionID);
 
             if ($newData == null) {
                 //No session data was available. Check to see if there is a mapping
                 //for a zombie key to an active session key
-                $regeneratedID = $this->driver->findSessionIDFromZombieID($this->sessionID);
+                $regeneratedID = $this->driver->findSessionIDFromZombieID($sessionID);
 
                 if ($regeneratedID) {
                     //The user is trying to use a recently re-generated key.
                     $this->zombieKeyDetected();
-                    $this->sessionID = $regeneratedID;
-                    $newData = $this->driver->getData($this->sessionID);
+                    $sessionID = $regeneratedID;
+                    $newData = $this->driver->getData($sessionID);
                 }
                 else {
                     //Session id was not valid, and was not mapped from a zombie key to a live
                     //key. Therefore it's a totally dead key.
                     $this->invalidKeyAccessed();
-                    return null;
+                    return [null, []];
                 }
             }
         }
 
-        return $newData;
+        return [$sessionID, $newData];
     }
 
     /**
@@ -241,6 +277,10 @@ class Session {
      * @throws FailedToAcquireLockException
      */
     function acquireLock() {
+        if ($this->sessionID == null) {
+            throw new AsmException("Cannot acquire lock, session is not open.");
+        }
+        
         $totalTimeWaitedForLock = 0;
 
         do {
@@ -332,7 +372,8 @@ class Session {
     }
 
     /**
-     * 
+     * @param $userProfile
+     * @throws AsmException
      */
     function performProfileSecurityCheck($userProfile) {
         if ($userProfile === null) {
