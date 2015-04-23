@@ -46,7 +46,6 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase {
         $driver->deleteSession($sessionID);
         $sessionAfterDelete = $driver->openSession($sessionID);        
         $this->assertNull($sessionAfterDelete);
-
     }
     
     

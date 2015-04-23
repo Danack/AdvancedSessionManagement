@@ -14,9 +14,9 @@ use Predis\Client as RedisClient;
 class SessionTest extends \PHPUnit_Framework_TestCase {
 
     /**
-     * @var \Auryn\Provider
+     * @var \Auryn\injector
      */
-    private $provider;
+    private $injector;
     
     private $sessionConfig;
 
@@ -55,7 +55,8 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
     
 
     protected function setUp() {
-        $this->provider = createProvider();
+        $this->injector = createProvider();
+        
         $this->sessionConfig = new SessionConfig(
             'SessionTest',
             1000,
@@ -76,7 +77,25 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         //$session = $this->provider->make(\ASM\Session::class);        
         //$this->provider->share($sessionConfig);
     }
+    
+    function getFileDriver()
+    {
+        $path = "./sesstest/subdir".rand(1000000, 10000000);
+        @mkdir($path, true);
 
+        return $this->injector->make('ASM\Driver\FileDriver', [':path' => $path]);
+
+    }
+
+    function test()
+    {
+        $driver = $this->getFileDriver();
+ 
+
+    }
+    
+    
+    
 //    function testLock() {
 //        $session = $this->createEmptySession();
 //        $session->acquireLock();

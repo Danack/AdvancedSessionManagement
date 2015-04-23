@@ -58,7 +58,7 @@ class FileDriverTest extends AbstractDriverTest {
         $path = $vfsStreamDirectory->url();
         $fileDriver = $this->injector->make('ASM\Driver\FileDriver', [':path' => $path]);
         $fileDriver->createSession();
-    }
+    }    
 }
 
 /*

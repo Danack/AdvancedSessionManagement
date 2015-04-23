@@ -3,35 +3,40 @@
 namespace ASM;
 
 
-class SimpleProfile {
+class SimpleProfile
+{
 
     private $ipAddress;
 
     private $userAgent;
 
-    function __construct($ipAddress, $userAgent) {
-        $this->ipAddress = $ipAddress; 
+    function __construct($userAgent, $ipAddress)
+    {
+        $this->ipAddress = $ipAddress;
         $this->userAgent = $userAgent;
     }
 
     /**
      * @return mixed
      */
-    public function getIPAddress() {
+    public function getIPAddress()
+    {
         return $this->ipAddress;
     }
 
     /**
      * @return mixed
      */
-    public function getUserAgent() {
+    public function getUserAgent()
+    {
         return $this->userAgent;
     }
 
     /**
      * @return string
      */
-    public function __toString() {
+    public function __toString()
+    {
         $data = [];
         $data['ipAddress'] = $this->ipAddress;
         $data['userAgent'] = $this->userAgent;
