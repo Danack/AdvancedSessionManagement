@@ -7,87 +7,30 @@ namespace ASM\Driver;
 interface Driver {
 
     /**
-     * Open an existing session. Returns either the session data or null if 
+     * Open an existing session. Returns either the opened session or null if 
      * the session could not be found.
      * @param $sessionID
-     * @return string|false
+     * @return DriverOpen|null The newly opened session
      */
     function openSession($sessionID);
 
     /**
      * Create a new session.
-     * @return string The newly created session ID.
+     * @return DriverOpen The newly opened session.
      */
     function createSession();
 
-    /**
-     * @param $sessionID
-     * @param string $saveData 
-     */
-    function save($sessionID, $saveData);
-
-    function close();
-    
-    //function getData($sessionID);
-
-    /**
-     * Acquire a lock for the session
-     * @param $sessionID
-     * @param $milliseconds
-     */
-    function acquireLock($sessionID, $lockTimeMS, $acquireTimeoutMS);
-
-    /**
-     * @param $sessionID
-     * @param $milliseconds
-     * @return mixed
-     */
-    function renewLock($sessionID, $milliseconds);
 
     /**
      * @param $sessionID
      * @return mixed
      */
-    function releaseLock($sessionID);
+//    function forceReleaseLock($sessionID);
 
-    /**
-     * Test whether the driver thinks the data is locked. The result may
-     * not be accurate when another process has force released the lock.
-     * @param $sessionID
-     * @return boolean
-     */
-    function isLocked($sessionID);
-
-    /**
-     * @param $sessionID
-     * @return boolean
-     */
-    function validateLock($sessionID);
-    
-    /**
-     * @param $sessionID
-     * @return mixed
-     */
-    function forceReleaseLock($sessionID);
-
-    /**
-     * @param $dyingSessionID
-     * @param $newSessionID
-     * @param $zombieTimeMilliseconds
-     * @return string newSessionID
-     */
-    function setupZombieID($dyingSessionID, $zombieTimeMilliseconds);
-
-    /**
-     * @param $sessionID
-     * @return mixed
-     */
-    function findSessionIDFromZombieID($zombieSsessionID);
-    
     /**
      * @return mixed
      */
-    function destroyExpiredSessions();
+    //function destroyExpiredSessions();
     
     /**
      * Delete a single session that matches the $sessionID
@@ -99,18 +42,18 @@ interface Driver {
      * @param $sessionID
      * @param $sessionProfile
      */
-    function addProfile($sessionID, $sessionProfile);
+    //function addProfile($sessionID, $sessionProfile);
 
     /**
      * @param $sessionID
-     * @return mixed
+     * @return string[]
      */
-    function getStoredProfile($sessionID);
+    //function getStoredProfiles($sessionID);
 
     /**
      * @param $sessionID
      * @param array $sessionProfiles
      */
-    function storeSessionProfiles($sessionID, array $sessionProfiles);
+    //function storeSessionProfiles($sessionID, array $sessionProfiles);
 }
 

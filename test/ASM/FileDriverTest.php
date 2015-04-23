@@ -16,7 +16,48 @@ class FileDriverTest extends AbstractDriverTest {
 //        // this is showing errors
 //        //return $this->injector->make('ASM\Driver\FileDriver', [':path' => $path]);
 
-        return $this->injector->make('ASM\Driver\FileDriver', [':path' => "./sesstest"]);
+        $path = "./sesstest/subdir".rand(1000000, 10000000);
+        @mkdir($path, true);
+
+        return $this->injector->make('ASM\Driver\FileDriver', [':path' => $path]);
+    }
+    
+    
+    function testEmptyDirNotAcceptable()
+    {
+        $this->setExpectedException('ASM\AsmException');
+        $this->injector->make('ASM\Driver\FileDriver', [':path' => ""]);
+    }
+
+
+    /**
+     * This just covers a few lines in the constructor of ASM\Driver\FileDriver
+     * @throws \Auryn\InjectorException
+     */
+    function testCoverage()
+    {
+        $serializer = new \ASM\PHPSerializer();
+        $idGenerator = new \ASM\StandardIDGenerator();
+
+        $path = "./sesstest/subdir".rand(1000000, 10000000);
+        @mkdir($path, true);
+
+        $this->injector->alias('ASM\Serializer', get_class($serializer));
+        $this->injector->share($serializer);
+
+        $this->injector->alias('ASM\IDGenerator', get_class($idGenerator));
+        $this->injector->share($idGenerator);
+
+        $fileDriver = new \ASM\Driver\FileDriver($path, $serializer, $idGenerator);
+    }
+    
+    function testUnwriteable()
+    {
+        $this->setExpectedException('ASM\AsmException');
+        $vfsStreamDirectory = vfsStream::newDirectory('sessionTest', 0);        
+        $path = $vfsStreamDirectory->url();
+        $fileDriver = $this->injector->make('ASM\Driver\FileDriver', [':path' => $path]);
+        $fileDriver->createSession();
     }
 }
 

@@ -57,7 +57,7 @@ function extractCookie($header) {
 /**
  * @param array $mocks
  * @param array $shares
- * @return \Auryn\Provider
+ * @return \Auryn\Injector
  */
 function createProvider($mocks = array(), $shares = array()) {
 
@@ -65,7 +65,7 @@ function createProvider($mocks = array(), $shares = array()) {
         //'Intahwebz\Session' => Intahwebz\Session\MockSession::class,
     ];
 
-    $provider = new \Auryn\Provider();
+    $provider = new \Auryn\Injector();
     $provider->alias('Psr\Log\LoggerInterface', 'Monolog\Logger');
 
     foreach ($standardImplementations as $interface => $implementation) {

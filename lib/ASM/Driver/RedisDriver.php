@@ -167,7 +167,6 @@ END;
     /**
      * @param $sessionID
      * @param $index
-     * @internal param $value
      * @return int
      */
     function get($sessionID, $index) {
@@ -181,7 +180,6 @@ END;
      * @param $sessionID
      * @param $index
      * @param $value
-     * @internal param $key
      * @return int
      */
     function set($sessionID, $index, $value) {
@@ -195,7 +193,6 @@ END;
      * @param $sessionID
      * @param $index
      * @param $increment
-     * @internal param $key
      * @return int
      */
     function increment($sessionID, $index, $increment) {
@@ -219,7 +216,6 @@ END;
      * @param $sessionID
      * @param $key
      * @param $value
-     * @internal param $index
      * @return int
      */
     function appendToList($sessionID, $key, $value) {
@@ -239,9 +235,7 @@ END;
     /**
      * @param $sessionID
      * @param $milliseconds
-     * @internal param $lockKey
-     * @internal param $lockNumber
-     * @return mixed true on success.
+     * @return mixed
      */
     function renewLock($sessionID, $milliseconds) {
         $lockKey = generateLockKey($sessionID);

@@ -5,22 +5,33 @@ namespace ASM;
 
 use ASM\Driver\ConcurrentDriver;
 
+/**
+ * Class ConcurrentSession
+ * @package ASM
+ */
 class ConcurrentSession extends Session {
 
-
+    /**
+     * @var ConcurrentDriver
+     */
+    protected $driver;
+    
     function __construct(
         SessionConfig $sessionConfig,
         $openMode,
         $cookieData,
         ConcurrentDriver $driver,
-        ValidationConfig $validationConfig = null
-    ) {
+        ValidationConfig $validationConfig = null)
+    {
         parent::__construct(
             $sessionConfig,
             $openMode,
             $cookieData,
             $driver,
-        $validationConfig);
+            $validationConfig
+        );
+
+        $this->driver = $driver;
     }
 
     /**
@@ -58,8 +69,8 @@ class ConcurrentSession extends Session {
      * @return int
      */
     function appendToList($index, $value) {
-        $key = generateAsyncKey($this->sessionID, $index);
-        return $this->driver->rpush($key, [$value]);
+        //$key = generateAsyncKey($this->sessionID, $index);
+        return $this->driver->appendToList($this->sessionID, $index, [$value]);
     }
 
     /**
@@ -67,8 +78,7 @@ class ConcurrentSession extends Session {
      * @return int
      */
     function clearList($index) {
-        $key = generateAsyncKey($this->sessionID, $index);
-        return $this->driver->del($key);
+        return $this->driver->clearList($this->sessionID, $index);
     }
 }
 

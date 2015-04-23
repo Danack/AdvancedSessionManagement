@@ -27,7 +27,7 @@ class Session {
     protected $sessionID = null;
 
     /**
-     * @var \ASM\Driver\RedisDriver
+     * @var \ASM\Driver\Driver
      */
     protected $driver;
 
@@ -147,7 +147,6 @@ class Session {
 
         return [];
     }
-
 
     /**
      * 

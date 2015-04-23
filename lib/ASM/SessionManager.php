@@ -2,7 +2,6 @@
 
 namespace ASM;
 
-use Predis\Client as RedisClient;
 use ASM\Driver\Driver as SessionDriver;
 
 class SessionManager {
@@ -21,10 +20,16 @@ class SessionManager {
         $this->driver = $driver;
     }
 
+    /**
+     * 
+     */
     function destroyExpiredSessions() {
         
     }
 
+    /**
+     * @param $sessionID
+     */
     function deleteSession($sessionID) {
         deleteAllRelatedRedisInfo($sessionID, $this->redisClient);
     }
