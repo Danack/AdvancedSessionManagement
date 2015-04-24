@@ -1,9 +1,12 @@
 <?php
 
-//Bootstrap for tests.
+$autoloader = require(__DIR__.'/../vendor/autoload.php');
 
-require_once(__DIR__.'/../vendor/autoload.php');
+/** @var $autoloader \Composer\Autoload\ClassLoader */
+$autoloader->add('ASM', __DIR__);
 
+
+$foo = new ASM\Mock\XKCDIDGenerator();
 
 function getRedisConfig() {
     $redisConfig = array(

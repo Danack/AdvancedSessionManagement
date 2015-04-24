@@ -6,6 +6,8 @@ namespace ASM\Driver;
 
 interface Driver {
 
+    const E_SESSION_ID_CLASS = 1;
+
     /**
      * Open an existing session. Returns either the opened session or null if 
      * the session could not be found.
@@ -19,7 +21,6 @@ interface Driver {
      * @return DriverOpen The newly opened session.
      */
     function createSession();
-
 
     /**
      * @param $sessionID

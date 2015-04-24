@@ -9,7 +9,8 @@ use ASM\SimpleProfile;
 use ASM\ValidationConfig;
 
 use Predis\Client as RedisClient;
-
+use ASM\Driver\RedisDriver;
+use ASM\JsonSerializer;
 
 class SessionTest extends \PHPUnit_Framework_TestCase {
 
@@ -24,41 +25,48 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
     
     private $redisOptions;
 
+    private $sessionName = "TestSession";
+
 
     /**
      * @param \ASM\ValidationConfig $validationConfig
      * @param \ASM\SimpleProfile $sessionProfile
      * @return Session
      */
-    function createEmptySession(ValidationConfig $validationConfig = null, SimpleProfile $sessionProfile = null) {
+    function createSessionManager($cookieData, ValidationConfig $validationConfig = null, SimpleProfile $sessionProfile = null) {
+        $redisClient = new RedisClient($this->redisConfig, $this->redisOptions);
+        $serializer = new JsonSerializer();
+        $redisDriver = new RedisDriver($redisClient, $serializer);
+        $session = new Session(
+            $this->sessionConfig,
+            Session::READ_ONLY,
+            $cookieData,
+            $redisDriver,
+            $validationConfig
+        );
 
-        $redisClient1 = new RedisClient($this->redisConfig, $this->redisOptions);
-        $mockCookie = array();
-        $session1 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookie, $redisClient1, $validationConfig, $sessionProfile);
-        $session1->start();
-
-        return $session1;
+        return $session;
     }
 
 
-    function createSecondSession(Session $session1, ValidationConfig $validationConfig = null,SimpleProfile $sessionProfile = null) {
-        $cookie = extractCookie($session1->getHeader());
-        $this->assertNotNull($cookie);
-        $redisClient2 = new RedisClient($this->redisConfig, $this->redisOptions);
-        $mockCookies2 = array_merge(array(), $cookie);
-        $session2 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookies2, $redisClient2, $validationConfig, $sessionProfile);
+//    function createSecondSession(Session $session1, ValidationConfig $validationConfig = null,SimpleProfile $sessionProfile = null) {
+//        $cookie = extractCookie($session1->getHeader());
+//        $this->assertNotNull($cookie);
+//        $redisClient2 = new RedisClient($this->redisConfig, $this->redisOptions);
+//        $mockCookies2 = array_merge(array(), $cookie);
+//        $session2 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookies2, $redisClient2, $validationConfig, $sessionProfile);
+//
+//        $session2->start();
+//
+//        return $session2;
+//    }
 
-        $session2->start();
-
-        return $session2;
-    }
-    
 
     protected function setUp() {
         $this->injector = createProvider();
         
         $this->sessionConfig = new SessionConfig(
-            'SessionTest',
+            $this->sessionName,
             1000,
             60
         );
@@ -87,15 +95,121 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
 
     }
 
-    function test()
+    function testInvalidSessionAccess()
     {
-        $driver = $this->getFileDriver();
- 
+        $wasCalled = false;
 
+        $invalidAccessCallable = function (Session $session) use (&$wasCalled) {
+            $wasCalled = true;
+        };
+
+        $validationConfig = new ValidationConfig(
+            null,
+            null,
+            $invalidAccessCallable,
+            null
+        );
+
+        $sessionID = "123456";
+        
+        $cookieData = [
+            $this->sessionName => $sessionID,
+        ];
+        
+        $sessionLoader = $this->createSessionManager($cookieData, $validationConfig);
+        $openSession = $sessionLoader->openSession();
+        $this->assertNull($openSession);
+        $this->assertTrue($wasCalled, "invalidAccessCallable was not called.");
+    }
+
+    /**
+     * This just covers the case when there is no invalidAccessCallable set
+     */
+    function testCoverageInvalidSessionDoesNothing()
+    {
+        $sessionID = "123456";
+
+        $cookieData = [
+            $this->sessionName => $sessionID,
+        ];
+
+        $sessionLoader = $this->createSessionManager($cookieData);
+        $openSession = $sessionLoader->openSession();
+        $this->assertNull($openSession);
+    }
+
+    // Create a session then open it with open.
+    function testCreateSessionThenReopen()
+    {
+        $cookieData = [];
+        $sessionLoader = $this->createSessionManager($cookieData);
+        $newSession = $sessionLoader->createSession();
+        $srcData = ['foo' => 'bar'];
+        $newSession->save($srcData);
+        $sessionID = $newSession->getSessionID();
+        $newSession->close();
+
+        $cookieData = [
+            $this->sessionName => $sessionID
+        ];
+
+        $sessionLoader2 = $this->createSessionManager($cookieData);
+        $reopenedSession = $sessionLoader2->openSession();        
+        $this->assertInstanceOf('ASM\Driver\DriverOpen', $reopenedSession);
+        $dataLoaded = $reopenedSession->readData();
+        $this->assertEquals($srcData, $dataLoaded);
+    }
+
+    // Create a session then reopen it with createSession
+    function testCreateSessionThenRecreate()
+    {
+        $cookieData = [];
+        $sessionLoader = $this->createSessionManager($cookieData);
+        $newSession = $sessionLoader->createSession();
+        $srcData = ['foo' => 'bar'.rand(1000000, 1000000)];
+        $newSession->save($srcData);
+        $sessionID = $newSession->getSessionID();
+        $newSession->close();
+
+        $cookieData = [
+            $this->sessionName => $sessionID
+        ];
+
+        $sessionLoader2 = $this->createSessionManager($cookieData);
+        $reopenedSession = $sessionLoader2->createSession();
+        $this->assertInstanceOf('ASM\Driver\DriverOpen', $reopenedSession);
+        $dataLoaded = $reopenedSession->readData();
+        $this->assertEquals($srcData, $dataLoaded);
+    }
+
+
+    // Create a session, delete it, then attempt to re-open
+    function testCreateSessionDeleteThenReopen()
+    {
+        $cookieData = [];
+        $sessionLoader = $this->createSessionManager($cookieData);
+        $newSession = $sessionLoader->createSession();
+        $srcData = ['foo' => 'bar'];
+        $newSession->save($srcData);
+        $sessionID = $newSession->getSessionID();
+        $newSession->close();
+
+        $sessionLoader->deleteSession($sessionID);
+
+        $cookieData = [
+            $this->sessionName => $sessionID
+        ];
+
+        $sessionLoader2 = $this->createSessionManager($cookieData);
+        //The session should no longer exist.
+        $reopenedSession = $sessionLoader2->openSession();
+        $this->assertNull($reopenedSession);
     }
     
     
-    
+
+
+
 //    function testLock() {
 //        $session = $this->createEmptySession();
 //        $session->acquireLock();
@@ -174,24 +288,43 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
 //    }
 
 
-    function testInvalidSessionCalled() {
+//    function testInvalidSessionCalled() {
 //        $mockCookies2 = array();
 //        $mockCookies2['SessionTest'] = "This_Does_not_Exist";
 //
 //        $redisClient2 = new RedisClient($this->redisConfig, $this->redisOptions);
 //
-//        $invalidCallbackCalled = false;
-//
-//        $invalidCallback = function (Session $session, SessionProfile $newProfile = null) use (&$invalidCallbackCalled) {
-//            $invalidCallbackCalled = true;
-//        };
-//
-//        $validationConfig = new ValidationConfig(null, null, $invalidCallback);
-//        $session2 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookies2, $redisClient2, $validationConfig);
-//
-//        $session2->start();
-//
-//        $this->assertTrue($invalidCallbackCalled, "Callable for an invalid sessionID was not called.");
+////        $session->createSession();
+//    }
+
+
+    function testBadKeyGeneration()
+    {
+        $redisClient = new RedisClient($this->redisConfig, $this->redisOptions);
+        
+        //This generator always return the same ID.
+        $idGenerator = new \ASM\Mock\XKCDIDGenerator();
+        $redisDriver = new RedisDriver(
+            $redisClient,
+            null,
+            $idGenerator
+        );
+
+        $sessionLoader = new Session(
+            $this->sessionConfig,
+            Session::READ_ONLY,
+            $cookieData = [],
+            $redisDriver
+        );
+        
+        $this->setExpectedException(
+            'ASM\AsmException',
+            null,
+            \ASM\Driver\Driver::E_SESSION_ID_CLASS
+        );
+
+        $session1 = $sessionLoader->createSession();
+        $session2 = $sessionLoader->createSession();
     }
 }
 

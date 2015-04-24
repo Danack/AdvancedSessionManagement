@@ -173,7 +173,10 @@ END;
             }
         }
 
-        throw new AsmException("Failed to createSession.");
+        throw new AsmException(
+            "Failed to createSession.",
+            \ASM\Driver\Driver::E_SESSION_ID_CLASS
+        );
     }
 
     /**
