@@ -77,13 +77,13 @@ class FileDriverOpen implements DriverOpen {
         
         return $data;
     }
-    
-    
 
+    /**
+     * 
+     */
     function close() {
         //releaseLock
         //    $this->__destruct();
     }
-    
 }
 

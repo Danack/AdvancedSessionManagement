@@ -10,7 +10,6 @@ use ASM\ValidationConfig;
 
 class ValidationConfigTest extends \PHPUnit_Framework_TestCase {
 
-    
     function testBasic()
     {
         $profileChanged = function($this, $userProfile, $sessionProfiles) {
