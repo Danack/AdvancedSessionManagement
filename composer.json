@@ -1,5 +1,5 @@
 {
-    "name": "Danack/advanced-session-management",
+    "name": "danack/asm",
     "description": "A userland replacement for PHP's session management.",
     "license": "MIT",
     "authors": [
