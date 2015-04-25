@@ -6,17 +6,17 @@ use ASM\Serializer;
 use ASM\IDGenerator;
 
 use ASM\AsmException;
-use ASM\FailedToAcquireLockException;
-use ASM\LockAlreadyReleasedException;
 
-class FileDriver implements Driver {
+
+class FileDriver implements Driver
+{
 
     const LOCK_FILE = 'lock_file';
 
     const PROFILES_FILE = 'profile_file';
-    
+
     const DATA_FILE = 'data_file';
-    
+
     const ZOMBIE_FILE = 'zombie_file';
 
     private $path;
@@ -31,7 +31,7 @@ class FileDriver implements Driver {
      * @var IDGenerator
      */
     private $idGenerator;
-    
+
 
     /**
      * @param $path
@@ -39,13 +39,14 @@ class FileDriver implements Driver {
      * @param IDGenerator $idGenerator
      * @throws AsmException
      */
-    function __construct($path, Serializer $serializer = null, IDGenerator $idGenerator = null) {
+    function __construct($path, Serializer $serializer = null, IDGenerator $idGenerator = null)
+    {
         if (strlen($path) == 0) {
             throw new AsmException("Empty filepath not acceptable for storing sessions.");
         }
 
         $this->path = $path;
-        
+
         if ($serializer) {
             $this->serializer = $serializer;
         }
@@ -67,39 +68,42 @@ class FileDriver implements Driver {
      * @param $sessionID
      * @return string|null
      */
-    function openSession($sessionID) {
+    function openSession($sessionID)
+    {
         $filename = $this->generateFilenameForData($sessionID);
         if (file_exists($filename) == false) {
             return null;
         }
-        
-        return new FileDriverOpen($sessionID, $this);
+
+        return new FileOpenSession($sessionID, $this);
     }
 
     /**
      * Create a new session.
      * @return string The newly created session ID.
      */
-    function createSession() {
+    function createSession()
+    {
         list($sessionID, $fileHandle) = $this->createNewSessionFile();
         $dataString = $this->serializer->serialize([]);
         fwrite($fileHandle, $dataString);
 
-        return new FileDriverOpen($sessionID, $this);
+        return new FileOpenSession($sessionID, $this);
     }
 
     /**
      * @return array
      * @throws AsmException
      */
-    private function createNewSessionFile() {
+    private function createNewSessionFile()
+    {
         $count = 10;
         do {
             $sessionID = $this->idGenerator->generateSessionID();
             $filename = $this->generateFilenameForData($sessionID);
             //This only succeeds if the file doesn't already exist
             $fileHandle = @fopen($filename, 'x+');
-            
+
             if ($fileHandle != false) {
                 break;
             }
@@ -110,17 +114,17 @@ class FileDriver implements Driver {
                 throw new AsmException("Failed to open a new session file.");
             }
         } while (1);
-        
+
         return [$sessionID, $fileHandle];
     }
 
     /**
      * @param $sessionID
-     * @param $type
+     * @internal param $type
      * @return string
-     * @throws AsmException
      */
-    private function generateFilenameForData($sessionID) {
+    private function generateFilenameForData($sessionID)
+    {
         return $this->path.'/'.$sessionID.".data";
     }
 
@@ -129,7 +133,8 @@ class FileDriver implements Driver {
      * @param $saveData
      * @throws AsmException
      */
-    function save($sessionID, $saveData) {
+    function save($sessionID, $saveData)
+    {
         $filename = $this->generateFilenameForData($sessionID);
         $dataString = $this->serializer->serialize($saveData);
         file_put_contents($filename, $dataString);
@@ -141,9 +146,10 @@ class FileDriver implements Driver {
      * @return mixed
      * @throws AsmException
      */
-    function read($sessionID) {
+    function read($sessionID)
+    {
         $filename = $this->generateFilenameForData($sessionID);
-        $dataString = file_get_contents($filename); 
+        $dataString = file_get_contents($filename);
         $data = $this->serializer->unserialize($dataString);
 
         return $data;
@@ -311,7 +317,8 @@ class FileDriver implements Driver {
      * Delete a single session that matches the $sessionID
      * @param $sessionID
      */
-    function deleteSession($sessionID) {
+    function deleteSession($sessionID)
+    {
         $filename = $this->generateFilenameForData($sessionID);
         unlink($filename);
     }

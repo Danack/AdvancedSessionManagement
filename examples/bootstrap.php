@@ -3,7 +3,7 @@
 require_once('../../vendor/autoload.php');
 
 
-use ASM\Session;
+use ASM\SessionManager;
 use ASM\SessionConfig;
 use Predis\Client as RedisClient;
 
@@ -29,5 +29,5 @@ $redisOptions = array(
 
 $redisClient = new RedisClient($redisParameters, $redisOptions);
 
-$session = new Session($sessionConfig, Session::READ_ONLY, $_COOKIE, $redisClient);
+$session = new SessionManager($sessionConfig, SessionManager::READ_ONLY, $_COOKIE, $redisClient);
 

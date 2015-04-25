@@ -32,14 +32,14 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase {
         $data = ['foo' => 'bar'.rand(100000000, 1000000000)];
         
         $openDriver = $driver->createSession();
-        $openDriver->save($data);
+        $openDriver->saveData($data);
         $sessionID = $openDriver->getSessionID();
         $openDriver->close();
 
         $reopenedSession = $driver->openSession($sessionID);
-        $this->assertInstanceOf('ASM\Driver\DriverOpen', $reopenedSession);
+        $this->assertInstanceOf('ASM\Session', $reopenedSession);
 
-        $readData = $reopenedSession->readData();
+        $readData = $reopenedSession->loadData();
         $this->assertEquals($data, $readData);
 
         //Delete and test no longer openable

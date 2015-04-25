@@ -9,13 +9,14 @@ use ASM\Driver\ConcurrentDriver;
  * Class ConcurrentSession
  * @package ASM
  */
-class ConcurrentSession extends Session {
+class ConcurrentSession extends SessionManager
+{
 
     /**
      * @var ConcurrentDriver
      */
     protected $driver;
-    
+
     function __construct(
         SessionConfig $sessionConfig,
         $openMode,

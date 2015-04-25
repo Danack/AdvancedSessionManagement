@@ -4,7 +4,10 @@
 namespace ASM\Driver;
 
 
-class RedisDriverOpen implements DriverOpen {
+use ASM\Session;
+
+class RedisOpenSession implements Session
+{
 
 
     protected $sessionID;
@@ -37,10 +40,12 @@ class RedisDriverOpen implements DriverOpen {
     }
 
     /**
-     * @param $sessionID
-     * @param $saveData string
+     * @param string $data
+     * @internal param $sessionID
+     * @internal param string $saveData
      */
-    function save($data) {
+    function saveData($data)
+    {
         //$sessionID =
         $this->redisDriver->save($this->sessionID, $data);
 
@@ -49,7 +54,7 @@ class RedisDriverOpen implements DriverOpen {
     /**
      *
      */
-    function readData()
+    function loadData()
     {
         $data = $this->redisDriver->read($this->sessionID);
 
@@ -64,7 +69,7 @@ class RedisDriverOpen implements DriverOpen {
         //releaseLock
         //    $this->__destruct();
     }
-    
+
 //
 //    /**
 //     * @param $sessionID
@@ -133,7 +138,6 @@ class RedisDriverOpen implements DriverOpen {
 //        $key = generateAsyncKey($sessionID, $index);
 //        return $this->redisClient->del($key);
 //    }
-
 
 
 //    /**

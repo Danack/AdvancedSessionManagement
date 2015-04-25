@@ -16,7 +16,8 @@
     },
 
     "require": {
-        "predis/predis": "1.0.1"
+        "ircmaxell/random-lib": "^1.1.0",
+        "predis/predis": "^1.0.1"
     },
     "autoload": {
         "psr-0": {

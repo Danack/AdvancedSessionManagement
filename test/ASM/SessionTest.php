@@ -3,7 +3,7 @@
 
 namespace ASM\Tests;
 
-use ASM\Session;
+use ASM\SessionManager;
 use ASM\SessionConfig;
 use ASM\SimpleProfile;
 use ASM\ValidationConfig;
@@ -31,15 +31,15 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
     /**
      * @param \ASM\ValidationConfig $validationConfig
      * @param \ASM\SimpleProfile $sessionProfile
-     * @return Session
+     * @return SessionManager
      */
     function createSessionManager($cookieData, ValidationConfig $validationConfig = null, SimpleProfile $sessionProfile = null) {
         $redisClient = new RedisClient($this->redisConfig, $this->redisOptions);
         $serializer = new JsonSerializer();
         $redisDriver = new RedisDriver($redisClient, $serializer);
-        $session = new Session(
+        $session = new SessionManager(
             $this->sessionConfig,
-            Session::READ_ONLY,
+            SessionManager::READ_ONLY,
             $cookieData,
             $redisDriver,
             $validationConfig
@@ -99,7 +99,7 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
     {
         $wasCalled = false;
 
-        $invalidAccessCallable = function (Session $session) use (&$wasCalled) {
+        $invalidAccessCallable = function (SessionManager $session) use (&$wasCalled) {
             $wasCalled = true;
         };
 
@@ -145,7 +145,7 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $sessionLoader = $this->createSessionManager($cookieData);
         $newSession = $sessionLoader->createSession();
         $srcData = ['foo' => 'bar'];
-        $newSession->save($srcData);
+        $newSession->saveData($srcData);
         $sessionID = $newSession->getSessionID();
         $newSession->close();
 
@@ -155,8 +155,8 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
 
         $sessionLoader2 = $this->createSessionManager($cookieData);
         $reopenedSession = $sessionLoader2->openSession();        
-        $this->assertInstanceOf('ASM\Driver\DriverOpen', $reopenedSession);
-        $dataLoaded = $reopenedSession->readData();
+        $this->assertInstanceOf('ASM\Session', $reopenedSession);
+        $dataLoaded = $reopenedSession->loadData();
         $this->assertEquals($srcData, $dataLoaded);
     }
 
@@ -167,7 +167,7 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $sessionLoader = $this->createSessionManager($cookieData);
         $newSession = $sessionLoader->createSession();
         $srcData = ['foo' => 'bar'.rand(1000000, 1000000)];
-        $newSession->save($srcData);
+        $newSession->saveData($srcData);
         $sessionID = $newSession->getSessionID();
         $newSession->close();
 
@@ -177,8 +177,8 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
 
         $sessionLoader2 = $this->createSessionManager($cookieData);
         $reopenedSession = $sessionLoader2->createSession();
-        $this->assertInstanceOf('ASM\Driver\DriverOpen', $reopenedSession);
-        $dataLoaded = $reopenedSession->readData();
+        $this->assertInstanceOf('ASM\Session', $reopenedSession);
+        $dataLoaded = $reopenedSession->loadData();
         $this->assertEquals($srcData, $dataLoaded);
     }
 
@@ -190,7 +190,7 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $sessionLoader = $this->createSessionManager($cookieData);
         $newSession = $sessionLoader->createSession();
         $srcData = ['foo' => 'bar'];
-        $newSession->save($srcData);
+        $newSession->saveData($srcData);
         $sessionID = $newSession->getSessionID();
         $newSession->close();
 
@@ -310,9 +310,9 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
             $idGenerator
         );
 
-        $sessionLoader = new Session(
+        $sessionLoader = new SessionManager(
             $this->sessionConfig,
-            Session::READ_ONLY,
+            SessionManager::READ_ONLY,
             $cookieData = [],
             $redisDriver
         );

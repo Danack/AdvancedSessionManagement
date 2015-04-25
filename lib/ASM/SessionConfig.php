@@ -2,7 +2,8 @@
 
 namespace ASM;
 
-class SessionConfig {
+class SessionConfig
+{
 
     const LOCK_ON_OPEN = 'LOCK_ON_OPEN';
     const LOCK_ON_WRITE = 'LOCK_ON_WRITE';
@@ -13,27 +14,27 @@ class SessionConfig {
     private $lifetime;
 
     /**
-     * @var int When a session ID is changed through Session::regenerateSessionID 
+     * @var int When a session ID is changed through Session::regenerateSessionID
      * how long should the previous sessionID be allowed to access the session data.
      * This is useful when multiple requests hit the server at the same time, and you don't want
      * them to block each other.
      */
     private $zombieTime;
-    
+
     private $sessionName;
-    
+
     private $name;
 
     /**
-     * @var int How long sessions should be locked for when they are locked. Sessions that 
+     * @var int How long sessions should be locked for when they are locked. Sessions that
      * are locked for longer than this time will be automatically unlocked, as it assumed
      * that the PHP processing them has crashed.
-     * 
+     *
      */
     private $lockMilliSeconds;
 
     /**
-     * @var 
+     * @var
      */
     private $maxLockWaitTimeMilliseconds;
 
@@ -43,12 +44,13 @@ class SessionConfig {
         $zombieTime,
         $lockMode = self::LOCK_ON_OPEN,
         $lockTimeInMilliseconds = 30000
-    ) {
+    )
+    {
         $this->lifetime = $lifetime;
         $this->zombieTime = $zombieTime;
         $this->sessionName = $sessionName;
         $this->lockMode = $lockMode;
-        
+
         $this->lockMilliSeconds = $lockTimeInMilliseconds;
 
         //Time in microseconds
@@ -58,43 +60,50 @@ class SessionConfig {
     /**
      * @return mixed
      */
-    public function getName() {
+    public function getName()
+    {
         return $this->name;
     }
 
     /**
      * @return mixed
      */
-    public function getLifetime() {
+    public function getLifetime()
+    {
         return $this->lifetime;
     }
 
     /**
      * @return mixed
      */
-    public function getSessionName() {
+    public function getSessionName()
+    {
         return $this->sessionName;
     }
 
     /**
      * @return mixed
      */
-    public function getZombieTime() {
+    public function getZombieTime()
+    {
         return $this->zombieTime;
     }
-    
-    function getLockMilliSeconds() {
+
+    function getLockMilliSeconds()
+    {
         return $this->lockMilliSeconds;
     }
 
-    function getMaxLockWaitTimeMilliseconds() {
+    function getMaxLockWaitTimeMilliseconds()
+    {
         return $this->maxLockWaitTimeMilliseconds;
     }
 
     /**
      * @return string
      */
-    function getLockMode() {
+    function getLockMode()
+    {
         return $this->lockMode;
     }
 }

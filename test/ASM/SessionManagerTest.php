@@ -3,9 +3,9 @@
 
 namespace ASM\Tests;
 
-use ASM\Session;
-use ASM\SessionConfig;
 use ASM\SessionManager;
+use ASM\SessionConfig;
+
 use ASM\SimpleProfile;
 use ASM\ValidationConfig;
 
@@ -15,7 +15,7 @@ use Predis\Client as RedisClient;
 class SessionManagerTest extends \PHPUnit_Framework_TestCase {
 
     /**
-     * @var \Auryn\Provider
+     * @var \Auryn\Injector
      */
     private $provider;
     
@@ -29,7 +29,7 @@ class SessionManagerTest extends \PHPUnit_Framework_TestCase {
     /**
      * @param \ASM\ValidationConfig $validationConfig
      * @param \ASM\SimpleProfile $sessionProfile
-     * @return Session
+     * @return SessionManager
      */
 //    function createEmptySession(ValidationConfig $validationConfig = null, SimpleProfile $sessionProfile = null) {
 //

@@ -3,13 +3,15 @@
 
 namespace ASM;
 
-class PHPSerializer implements Serializer {
+class PHPSerializer implements Serializer
+{
 
     /**
      * @param array $data
      * @return mixed
      */
-    function serialize(array $data) {
+    function serialize(array $data)
+    {
         return \serialize($data);
     }
 
@@ -17,7 +19,8 @@ class PHPSerializer implements Serializer {
      * @param string $string
      * @return mixed
      */
-    function unserialize($string) {
+    function unserialize($string)
+    {
         return unserialize($string);
     }
 }

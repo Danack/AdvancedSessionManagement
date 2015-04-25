@@ -3,7 +3,7 @@
 
 namespace ASM\Tests;
 
-use ASM\Session;
+use ASM\SessionManager;
 use ASM\SessionConfig;
 use ASM\SimpleProfile;
 use ASM\ValidationConfig;
@@ -56,7 +56,7 @@ class ConcurrentSessionTest extends \PHPUnit_Framework_TestCase {
 //    }
 
     /**
-     * @param Session $session1
+     * @param SessionManager $session1
      * @param ValidationConfig $validationConfig
      * @param SimpleProfile $sessionProfile
      * @return ConcurrentSession

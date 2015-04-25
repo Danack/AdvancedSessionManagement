@@ -8,38 +8,42 @@ use Predis\Client as RedisClient;
 use ASM\AsmException;
 
 /**
- * 
- * 
+ *
+ *
  * SessionDataKey - if this exists the session exists
- * 
+ *
  * ZombieKey - if this exists, the value it contains is the session ID that replaced
- * the session ID that was destroyed. 
- * 
+ * the session ID that was destroyed.
+ *
  * LockKey - Used to hold implement a lock for the session.
- * 
+ *
  * Profile key - stores a list of the allowed user-profile strings that can access
  *               this session.
- * 
+ *
  */
 
 /**
  * @param $sessionID
  * @return string
- * 
+ *
  */
-function generateSessionDataKey($sessionID) {
+function generateSessionDataKey($sessionID)
+{
     return 'session:'.$sessionID;
 }
 
-function generateZombieKey($dyingSessionID) {
+function generateZombieKey($dyingSessionID)
+{
     return 'zombie:'.$dyingSessionID;
 }
 
-function generateLockKey($sessionID) {
+function generateLockKey($sessionID)
+{
     return 'session:'.$sessionID.':lock';
 }
 
-function generateProfileKey($sessionID) {
+function generateProfileKey($sessionID)
+{
     return 'session:'.$sessionID.':profile';
 }
 
@@ -48,15 +52,16 @@ function generateProfileKey($sessionID) {
  * @internal param null $index
  * @return string
  */
-function generateAsyncKey($sessionID) {
+function generateAsyncKey($sessionID)
+{
     $key = 'session:'.$sessionID.':async';
 
     return $key;
 }
 
 
-
-class RedisDriver implements Driver {
+class RedisDriver implements Driver
+{
 
     /**
      * @var \Predis\Client
@@ -78,15 +83,15 @@ class RedisDriver implements Driver {
      * @var IDGenerator
      */
     private $idGenerator;
-    
+
 
     /**
-     * A redis lua script 
-     * 
-     * Todo - upgrade to a fault tolerant distributed version of this. 
+     * A redis lua script
+     *
+     * Todo - upgrade to a fault tolerant distributed version of this.
      * https://github.com/ronnylt/redlock-php/blob/master/src/RedLock.php
      * http://redis.io/topics/distlock
-     * 
+     *
      */
     const unlockScript = <<< END
 if redis.call("get",KEYS[1]) == ARGV[1]
@@ -138,10 +143,11 @@ END;
      * @param $sessionID
      * @return string|null
      */
-    function openSession($sessionID) {
-        $dataKey = generateSessionDataKey($sessionID);        
+    function openSession($sessionID)
+    {
+        $dataKey = generateSessionDataKey($sessionID);
         if ($this->redisClient->exists($dataKey)) {
-            return new RedisDriverOpen($sessionID, $this);
+            return new RedisOpenSession($sessionID, $this);
         }
 
         return null;
@@ -149,14 +155,14 @@ END;
 
     /**
      * Create a new session
-     * @return RedisDriverOpen
+     * @return RedisOpenSession
      * @throws AsmException
      */
     function createSession()
     {
         $sessionLifeTime = 3600; // 1 hour
 
-        for ($count=0 ; $count < 10 ; $count++) {
+        for ($count = 0; $count < 10; $count++) {
             $sessionID = $this->idGenerator->generateSessionID();
             $dataKey = generateSessionDataKey($sessionID);
             $dataString = $this->serializer->serialize([]);
@@ -169,7 +175,7 @@ END;
             );
 
             if ($set) {
-                return new RedisDriverOpen($sessionID, $this);
+                return new RedisOpenSession($sessionID, $this);
             }
         }
 
@@ -183,7 +189,8 @@ END;
      * @param $sessionID
      * @return mixed|void
      */
-    function deleteSession($sessionID) {
+    function deleteSession($sessionID)
+    {
         $dataKey = generateSessionDataKey($sessionID);
         $this->redisClient->del($dataKey);
     }
@@ -193,7 +200,8 @@ END;
      * @return mixed
      * @throws AsmException
      */
-    function read($sessionID) {
+    function read($sessionID)
+    {
         $dataKey = generateSessionDataKey($sessionID);
         $dataString = $this->redisClient->get($dataKey);
         $data = $this->serializer->unserialize($dataString);
@@ -207,10 +215,11 @@ END;
      * @param $saveData
      * @throws AsmException
      */
-    function save($sessionID, $saveData) {
+    function save($sessionID, $saveData)
+    {
 
         $sessionLifeTime = 3600; // 1 hour
-        
+
         $dataKey = generateSessionDataKey($sessionID);
         $dataString = $this->serializer->serialize($saveData);
         $this->redisClient->set(

@@ -3,7 +3,7 @@
 
 namespace ASM\Tests;
 
-use ASM\Session;
+use ASM\SessionManager;
 use ASM\SessionConfig;
 use ASM\SimpleProfile;
 use ASM\ValidationConfig;
@@ -53,7 +53,7 @@ class SessionCustomBehaviourTest extends \PHPUnit_Framework_TestCase {
     /**
      * @param \ASM\ValidationConfig $validationConfig
      * @param \ASM\SimpleProfile $sessionProfile
-     * @return Session
+     * @return SessionManager
      */
 //    function createEmptySession(ValidationConfig $validationConfig = null, SimpleProfile $sessionProfile = null) {
 //
@@ -66,10 +66,10 @@ class SessionCustomBehaviourTest extends \PHPUnit_Framework_TestCase {
 //    }
 
     /**
-     * @param Session $session1
+     * @param SessionManager $session1
      * @param ValidationConfig $validationConfig
      * @param SimpleProfile $sessionProfile
-     * @return Session
+     * @return SessionManager
      */
 //    function createSecondSession(Session $session1, ValidationConfig $validationConfig = null,SimpleProfile $sessionProfile = null) {
 //        $cookie = extractCookie($session1->getHeader());

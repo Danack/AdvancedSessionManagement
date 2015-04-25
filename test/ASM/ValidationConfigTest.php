@@ -4,7 +4,7 @@
 
 namespace ASM\Tests;
 
-use ASM\Session;
+use ASM\SessionManager;
 use ASM\SimpleProfile;
 use ASM\ValidationConfig;
 
@@ -14,11 +14,11 @@ class ValidationConfigTest extends \PHPUnit_Framework_TestCase {
     {
         $profileChanged = function($this, $userProfile, $sessionProfiles) {
         };
-        $zombieKeyAccessed = function(Session $session) {
+        $zombieKeyAccessed = function(SessionManager $session) {
         };
-        $invalidSessionAccessed = function(Session $session) {
+        $invalidSessionAccessed = function(SessionManager $session) {
         };
-        $lostLockCallable = function(Session $session) {
+        $lostLockCallable = function(SessionManager $session) {
         };
 
         $validationConfig = new ValidationConfig(

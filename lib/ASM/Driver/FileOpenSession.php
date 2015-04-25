@@ -2,9 +2,10 @@
 
 
 namespace ASM\Driver;
+use ASM\Session;
 
-
-class FileDriverOpen implements DriverOpen {
+class FileOpenSession implements Session
+{
 
 
     protected $sessionID;
@@ -25,12 +26,12 @@ class FileDriverOpen implements DriverOpen {
      * process has force released the lock, and it is no longer owned by this process.
      */
     protected $lockContents = null;
-    
+
 
     /**
      * @param $sessionID
-     * @param $fileHandle
      * @param FileDriver $fileDriver
+     * @internal param $fileHandle
      */
     function __construct($sessionID, FileDriver $fileDriver)
     {
@@ -51,37 +52,41 @@ class FileDriverOpen implements DriverOpen {
     /**
      *
      */
-    function __destruct() {
+    function __destruct()
+    {
 //        if ($this->fileHandle != null) {
 //            fclose($this->fileHandle);
 //        }
 //        $this->fileHandle = null;
     }
-    
+
     /**
-     * @param $sessionID
-     * @param $saveData string
+     * @param $data
+     * @internal param $sessionID
+     * @internal param string $saveData
      */
-    function save($data) {
+    function saveData($data)
+    {
         //$sessionID =
-            $this->fileDriver->save($this->sessionID, $data);
+        $this->fileDriver->save($this->sessionID, $data);
 
     }
 
     /**
      *
      */
-    function readData()
+    function loadData()
     {
         $data = $this->fileDriver->read($this->sessionID);
-        
+
         return $data;
     }
 
     /**
-     * 
+     *
      */
-    function close() {
+    function close()
+    {
         //releaseLock
         //    $this->__destruct();
     }

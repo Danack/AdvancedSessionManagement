@@ -4,21 +4,24 @@
 namespace ASM\Driver;
 
 
-interface Driver {
+use ASM\Session;
+
+interface Driver
+{
 
     const E_SESSION_ID_CLASS = 1;
 
     /**
-     * Open an existing session. Returns either the opened session or null if 
+     * Open an existing session. Returns either the opened session or null if
      * the session could not be found.
      * @param $sessionID
-     * @return DriverOpen|null The newly opened session
+     * @return Session|null The newly opened session
      */
     function openSession($sessionID);
 
     /**
      * Create a new session.
-     * @return DriverOpen The newly opened session.
+     * @return Session The newly opened session.
      */
     function createSession();
 
@@ -32,7 +35,7 @@ interface Driver {
      * @return mixed
      */
     //function destroyExpiredSessions();
-    
+
     /**
      * Delete a single session that matches the $sessionID
      * @param $sessionID

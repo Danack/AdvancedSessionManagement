@@ -4,7 +4,8 @@
 namespace ASM;
 
 
-interface Serializer {
+interface Serializer
+{
 
     /**
      * Convert a value into a string representation.
