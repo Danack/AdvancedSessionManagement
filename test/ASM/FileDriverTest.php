@@ -3,11 +3,10 @@
 
 namespace ASM\Tests;
 
-use org\bovigo\vfs\vfsStream,
-    org\bovigo\vfs\vfsStreamDirectory;
+use org\bovigo\vfs\vfsStream;
+use org\bovigo\vfs\vfsStreamDirectory;
 
-
-
+use ASM\Mock\MockSessionManager;
 
 class FileDriverTest extends AbstractDriverTest {
     function getDriver() {
@@ -16,7 +15,7 @@ class FileDriverTest extends AbstractDriverTest {
 //        // this is showing errors
 //        //return $this->injector->make('ASM\Driver\FileDriver', [':path' => $path]);
 
-        $path = "./sesstest/subdir".rand(1000000, 10000000);
+        $path = "./sessfiletest/subdir".rand(1000000, 10000000);
         @mkdir($path, true);
 
         return $this->injector->make('ASM\Driver\FileDriver', [':path' => $path]);
@@ -29,6 +28,10 @@ class FileDriverTest extends AbstractDriverTest {
         $this->injector->make('ASM\Driver\FileDriver', [':path' => ""]);
     }
 
+    function testCreate()
+    {
+        parent::testCreate();
+    }
 
     /**
      * This just covers a few lines in the constructor of ASM\Driver\FileDriver
@@ -39,7 +42,7 @@ class FileDriverTest extends AbstractDriverTest {
         $serializer = new \ASM\PHPSerializer();
         $idGenerator = new \ASM\StandardIDGenerator();
 
-        $path = "./sesstest/subdir".rand(1000000, 10000000);
+        $path = "./sessfiletest/subdir".rand(1000000, 10000000);
         @mkdir($path, true);
 
         $this->injector->alias('ASM\Serializer', get_class($serializer));
@@ -57,7 +60,7 @@ class FileDriverTest extends AbstractDriverTest {
         $vfsStreamDirectory = vfsStream::newDirectory('sessionTest', 0);        
         $path = $vfsStreamDirectory->url();
         $fileDriver = $this->injector->make('ASM\Driver\FileDriver', [':path' => $path]);
-        $fileDriver->createSession();
+        $fileDriver->createSession(new MockSessionManager());
     }    
 }
 

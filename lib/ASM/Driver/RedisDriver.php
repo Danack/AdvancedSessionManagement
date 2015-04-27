@@ -6,6 +6,9 @@ use ASM\Serializer;
 use ASM\IDGenerator;
 use Predis\Client as RedisClient;
 use ASM\AsmException;
+use ASM\SessionManager;
+
+use ASM\SessionManagerInterface;
 
 /**
  *
@@ -141,13 +144,14 @@ END;
      * Open an existing session. Returns either the session data or null if
      * the session could not be found.
      * @param $sessionID
+     * @param SessionManager $sessionManager
      * @return string|null
      */
-    function openSession($sessionID)
+    function openSession($sessionID, SessionManagerInterface $sessionManager)
     {
         $dataKey = generateSessionDataKey($sessionID);
         if ($this->redisClient->exists($dataKey)) {
-            return new RedisOpenSession($sessionID, $this);
+            return new RedisOpenSession($sessionID, $this, $sessionManager);
         }
 
         return null;
@@ -156,11 +160,12 @@ END;
     /**
      * Create a new session
      * @return RedisOpenSession
+     * @param SessionManager $sessionManager
      * @throws AsmException
      */
-    function createSession()
+    function createSession(SessionManagerInterface $sessionManager)
     {
-        $sessionLifeTime = 3600; // 1 hour
+        $sessionLifeTime = $sessionManager->getLifetime();
 
         for ($count = 0; $count < 10; $count++) {
             $sessionID = $this->idGenerator->generateSessionID();
@@ -175,7 +180,7 @@ END;
             );
 
             if ($set) {
-                return new RedisOpenSession($sessionID, $this);
+                return new RedisOpenSession($sessionID, $this, $sessionManager);
             }
         }
 
@@ -217,7 +222,6 @@ END;
      */
     function save($sessionID, $saveData)
     {
-
         $sessionLifeTime = 3600; // 1 hour
 
         $dataKey = generateSessionDataKey($sessionID);

@@ -2,11 +2,12 @@
 
 
 namespace ASM\Driver;
+
 use ASM\Session;
+use ASM\SessionManagerInterface;
 
 class FileOpenSession implements Session
 {
-
 
     protected $sessionID;
 
@@ -31,13 +32,28 @@ class FileOpenSession implements Session
     /**
      * @param $sessionID
      * @param FileDriver $fileDriver
-     * @internal param $fileHandle
      */
-    function __construct($sessionID, FileDriver $fileDriver)
+    function __construct($sessionID, FileDriver $fileDriver, SessionManagerInterface $sessionManager)
     {
         $this->sessionID = $sessionID;
         //$this->fileHandle = $fileHandle;
         $this->fileDriver = $fileDriver;
+        $this->sessionManager = $sessionManager;
+    }
+
+    function isPersisted()
+    {
+        // TODO: Implement isPersisted() method.
+    }
+
+    function getHeaders($caching,
+                        $lastModifiedTime = null,
+                        $path = null,
+                        $domain = false,
+                        $secure = false,
+                        $httpOnly = true)
+    {
+        // TODO: Implement getHeaders() method.
     }
 
     /**
@@ -46,6 +62,11 @@ class FileOpenSession implements Session
     function getSessionID()
     {
         return $this->sessionID;
+    }
+
+    function &getData()
+    {
+        throw new \Exception("Not implemented yet.");
     }
 
 

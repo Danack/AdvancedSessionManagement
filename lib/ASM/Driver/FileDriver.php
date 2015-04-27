@@ -4,9 +4,9 @@ namespace ASM\Driver;
 
 use ASM\Serializer;
 use ASM\IDGenerator;
-
 use ASM\AsmException;
-
+use ASM\SessionManager;
+use ASM\SessionManagerInterface;
 
 class FileDriver implements Driver
 {
@@ -68,27 +68,27 @@ class FileDriver implements Driver
      * @param $sessionID
      * @return string|null
      */
-    function openSession($sessionID)
+    function openSession($sessionID, SessionManagerInterface $sessionManager)
     {
         $filename = $this->generateFilenameForData($sessionID);
         if (file_exists($filename) == false) {
             return null;
         }
 
-        return new FileOpenSession($sessionID, $this);
+        return new FileOpenSession($sessionID, $this, $sessionManager);
     }
 
     /**
      * Create a new session.
      * @return string The newly created session ID.
      */
-    function createSession()
+    function createSession(SessionManagerInterface $sessionManager)
     {
         list($sessionID, $fileHandle) = $this->createNewSessionFile();
         $dataString = $this->serializer->serialize([]);
         fwrite($fileHandle, $dataString);
 
-        return new FileOpenSession($sessionID, $this);
+        return new FileOpenSession($sessionID, $this, $sessionManager);
     }
 
     /**
@@ -102,6 +102,10 @@ class FileDriver implements Driver
             $sessionID = $this->idGenerator->generateSessionID();
             $filename = $this->generateFilenameForData($sessionID);
             //This only succeeds if the file doesn't already exist
+
+            //TODO remove
+            @mkdir(dirname($filename), true);
+            
             $fileHandle = @fopen($filename, 'x+');
 
             if ($fileHandle != false) {
@@ -111,7 +115,7 @@ class FileDriver implements Driver
             $count++;
             if ($count > 10) {
                 //TODO - improve conditions of when an exception is thrown
-                throw new AsmException("Failed to open a new session file.");
+                throw new AsmException("Failed to open a new session file with name $filename");
             }
         } while (1);
 

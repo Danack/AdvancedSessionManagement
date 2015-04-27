@@ -6,23 +6,14 @@ namespace ASM;
 
 interface Session
 {
+    function isPersisted();
 
-
-//    /**
-//     * @return string
-//     */
-//    function getHeader() {
-//        $lifetime = $this->sessionConfig->getLifetime();
-//        $cookieHeader = generateCookieHeader(
-//            time(),
-//            $this->sessionConfig->getSessionName(),
-//            $this->getSessionID(),
-//            $lifetime
-//        );
-//
-//        return $cookieHeader;
-//    }
-
+    function getHeaders($caching,
+                        $lastModifiedTime = null,
+                        $path = null,
+                        $domain = false,
+                        $secure = false,
+                        $httpOnly = true);
 
     /**
      * @return mixed
@@ -41,12 +32,19 @@ interface Session
     function loadData();
 
 
+//    /**
+//     * @param string $data
+//     */
+    //function saveData($data);
+
+
     /**
-     * @param string $data
+     * @return array
      */
-    function saveData($data);
-
-
+    function &getData();
+    
+    function save();
+    
     /**
      * Test whether the driver thinks the data is locked. The result may
      * not be accurate when another process has force released the lock.

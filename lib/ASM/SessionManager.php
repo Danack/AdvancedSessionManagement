@@ -4,7 +4,7 @@ namespace ASM;
 
 use ASM\Driver\Driver as SessionDriver;
 
-class SessionManager
+class SessionManager implements SessionManagerInterface
 {
 
     const READ_ONLY = 'READ_ONLY';
@@ -68,6 +68,22 @@ class SessionManager
     }
 
     /**
+     * @return mixed
+     */
+    function getName()
+    {
+        return $this->sessionConfig->getName();
+    }
+
+    /**
+     * @return mixed
+     */
+    function getLifetime()
+    {
+        return $this->sessionConfig->getLifetime();
+    }
+
+    /**
      * Opens an existing session.
      *
      * Opens and returns the data for an existing session, if and only if the
@@ -85,8 +101,8 @@ class SessionManager
         }
 
         $sessionID = $this->cookieData[$this->sessionConfig->getSessionName()];
-        $openDriver = $this->driver->openSession($sessionID);
-
+        $openDriver = $this->driver->openSession($sessionID, $this);
+        
 //        list($sessionID, $data) = $this->loadData($sessionID);
 
         if ($openDriver == null) {
@@ -118,11 +134,17 @@ class SessionManager
     function createSession($userProfile = null)
     {
         $existingSession = $this->openSession($userProfile);
+
+//        var_dump($this->cookieData);
+//        var_dump($existingSession);
+//        exit(0);
+//        
+        
         if ($existingSession) {
             return $existingSession;
         }
 
-        return $this->driver->createSession();
+        return $this->driver->createSession($this);
     }
 
 
@@ -287,7 +309,7 @@ class SessionManager
     /**
      *
      */
-    function invalidSessionAccessed()
+    private function invalidSessionAccessed()
     {
         $invalidSessionAccessed = $this->validationConfig->getInvalidSessionAccessedCallable();
 

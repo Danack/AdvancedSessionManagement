@@ -5,6 +5,8 @@ namespace ASM\Driver;
 
 
 use ASM\Session;
+use ASM\SessionManager;
+use ASM\SessionManagerInterface;
 
 interface Driver
 {
@@ -15,15 +17,18 @@ interface Driver
      * Open an existing session. Returns either the opened session or null if
      * the session could not be found.
      * @param $sessionID
+     * @param SessionManagerInterface $sessionManager
      * @return Session|null The newly opened session
      */
-    function openSession($sessionID);
+
+    function openSession($sessionID, SessionManagerInterface $sessionManager);
 
     /**
      * Create a new session.
+     * @param SessionManagerInterface $sessionManager
      * @return Session The newly opened session.
      */
-    function createSession();
+    function createSession(SessionManagerInterface $sessionManager);
 
     /**
      * @param $sessionID

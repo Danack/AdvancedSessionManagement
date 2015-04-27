@@ -2,13 +2,15 @@
 
 namespace ASM\Tests;
 
+use ASM\Mock\MockSessionManager;
+
 abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase {
 
 
     /**
      * @var \Auryn\Injector
      */
-    protected $injector = null;
+    protected $injector;
     
     protected function setUp() {
         $this->injector = createProvider();
@@ -19,11 +21,11 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase {
      */
     abstract function getDriver();
 
-    
+
     function testOpenInvalidSession()
     {
         $driver = $this->getDriver();
-        $driver->openSession(12345);
+        $driver->openSession(12345, new MockSessionManager());
     }
     
 
@@ -31,12 +33,12 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase {
         $driver = $this->getDriver();
         $data = ['foo' => 'bar'.rand(100000000, 1000000000)];
         
-        $openDriver = $driver->createSession();
+        $openDriver = $driver->createSession(new MockSessionManager());
         $openDriver->saveData($data);
         $sessionID = $openDriver->getSessionID();
         $openDriver->close();
 
-        $reopenedSession = $driver->openSession($sessionID);
+        $reopenedSession = $driver->openSession($sessionID, new MockSessionManager());
         $this->assertInstanceOf('ASM\Session', $reopenedSession);
 
         $readData = $reopenedSession->loadData();
@@ -44,7 +46,7 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase {
 
         //Delete and test no longer openable
         $driver->deleteSession($sessionID);
-        $sessionAfterDelete = $driver->openSession($sessionID);        
+        $sessionAfterDelete = $driver->openSession($sessionID, new MockSessionManager());        
         $this->assertNull($sessionAfterDelete);
     }
     

@@ -23,7 +23,6 @@ class SessionConfig
 
     private $sessionName;
 
-    private $name;
 
     /**
      * @var int How long sessions should be locked for when they are locked. Sessions that
@@ -46,6 +45,7 @@ class SessionConfig
         $lockTimeInMilliseconds = 30000
     )
     {
+        $this->sessionName = $sessionName;
         $this->lifetime = $lifetime;
         $this->zombieTime = $zombieTime;
         $this->sessionName = $sessionName;
@@ -62,7 +62,7 @@ class SessionConfig
      */
     public function getName()
     {
-        return $this->name;
+        return $this->sessionName;
     }
 
     /**

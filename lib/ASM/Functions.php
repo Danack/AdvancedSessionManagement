@@ -28,7 +28,6 @@ namespace {
      */
     function getCacheHeaders($caching, $expireTime, $lastModifiedTime = null)
     {
-
         $headers = [];
 
         $maxAgeTime = $expireTime - time();
@@ -43,7 +42,7 @@ namespace {
         switch ($caching) {
 
             case(\ASM\SessionManager::CACHE_SKIP): {
-                //nothing to do, why is the user even calling this function?
+                // Don't send any caching headers
                 break;
             }
             case(\ASM\SessionManager::CACHE_PUBLIC): {
@@ -75,8 +74,9 @@ namespace {
                 $headers[] = "Pragma: no-cache";
                 break;
             }
+            
             default: {
-            throw new \InvalidArgumentException("Unknown cache setting '$caching'.");
+                throw new \InvalidArgumentException("Unknown cache setting '$caching'.");
             }
         }
 
