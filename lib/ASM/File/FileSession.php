@@ -1,15 +1,19 @@
 <?php
 
 
-namespace ASM\Driver;
+namespace ASM\File;
 
+use ASM\File\FileDriver;
 use ASM\Session;
-use ASM\SessionManagerInterface;
+use ASM\SessionManager;
 
-class FileOpenSession implements Session
+class FileSession implements Session
 {
 
     protected $sessionID;
+    
+    
+    protected $data = null;
 
 //    /**
 //     * @var bool
@@ -32,8 +36,9 @@ class FileOpenSession implements Session
     /**
      * @param $sessionID
      * @param FileDriver $fileDriver
+     * @param SessionManager $sessionManager
      */
-    function __construct($sessionID, FileDriver $fileDriver, SessionManagerInterface $sessionManager)
+    function __construct($sessionID, FileDriver $fileDriver, SessionManager $sessionManager)
     {
         $this->sessionID = $sessionID;
         //$this->fileHandle = $fileHandle;
@@ -64,12 +69,6 @@ class FileOpenSession implements Session
         return $this->sessionID;
     }
 
-    function &getData()
-    {
-        throw new \Exception("Not implemented yet.");
-    }
-
-
     /**
      *
      */
@@ -91,6 +90,22 @@ class FileOpenSession implements Session
         //$sessionID =
         $this->fileDriver->save($this->sessionID, $data);
 
+    }
+
+    function save()
+    {
+        $this->fileDriver->save($this->sessionID, $this->data);
+    }
+
+    function setData(array $data)
+    {
+        $this->data = $data;
+    }
+
+
+    function &getData()
+    {
+        throw new \Exception("Not implemented yet.");
     }
 
     /**

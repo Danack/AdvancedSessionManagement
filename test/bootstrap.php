@@ -55,6 +55,16 @@ function extractCookie($header) {
     return null;
 }
 
+function createSessionManager(ASM\Driver $driver)
+{
+    $sessionConfig = new ASM\SessionConfig(
+        'testSession',
+        3600,
+        10
+    );
+
+    return new ASM\SessionManager($sessionConfig, [], $driver);
+}
 
 
 /**
@@ -68,32 +78,36 @@ function createProvider($mocks = array(), $shares = array()) {
         //'Intahwebz\Session' => Intahwebz\Session\MockSession::class,
     ];
 
-    $provider = new \Auryn\Injector();
-    $provider->alias('Psr\Log\LoggerInterface', 'Monolog\Logger');
+    $injector = new \Auryn\Injector();
+    $injector->alias('Psr\Log\LoggerInterface', 'Monolog\Logger');
+
+
+    $injector->delegate('ASM\SessionManager', 'createSessionManager');
+    
 
     foreach ($standardImplementations as $interface => $implementation) {
         if (array_key_exists($interface, $mocks)) {
             if (is_object($mocks[$interface]) == true) {
-                $provider->alias($interface, get_class($mocks[$interface]));
-                $provider->share($mocks[$interface]);
+                $injector->alias($interface, get_class($mocks[$interface]));
+                $injector->share($mocks[$interface]);
             }
             else {
-                $provider->alias($interface, $mocks[$interface]);
+                $injector->alias($interface, $mocks[$interface]);
             }
             unset($mocks[$interface]);
         }
         else {
-            $provider->alias($interface, $implementation);
+            $injector->alias($interface, $implementation);
         }
     }
 
     foreach ($mocks as $class => $implementation) {
         if (is_object($implementation) == true) {
-            $provider->alias($class, get_class($implementation));
-            $provider->share($implementation);
+            $injector->alias($class, get_class($implementation));
+            $injector->share($implementation);
         }
         else {
-            $provider->alias($class, $implementation);
+            $injector->alias($class, $implementation);
         }
     }
 
@@ -102,22 +116,22 @@ function createProvider($mocks = array(), $shares = array()) {
 
     foreach ($standardShares as $class => $share) {
         if (array_key_exists($class, $shares)) {
-            $provider->share($shares[$class]);
+            $injector->share($shares[$class]);
             unset($shares[$class]);
         }
         else {
-            $provider->share($share);
+            $injector->share($share);
         }
     }
 
     foreach ($shares as $class => $share) {
-        $provider->share($share);
+        $injector->share($share);
     }
 
     
-    $provider->share($provider); //Yolo ServiceLocator
+    $injector->share($injector); //Yolo ServiceLocator
 
-    return $provider;
+    return $injector;
 }
 
  

@@ -1,7 +1,8 @@
 <?php
 
 
-namespace ASM;
+namespace ASM\Serializer;
+use ASM\Serializer;
 
 class PHPSerializer implements Serializer
 {

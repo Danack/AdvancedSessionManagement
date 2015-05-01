@@ -1,17 +1,16 @@
 <?php
 
 
-namespace ASM\Driver;
+namespace ASM\Redis;
 
 
 use ASM\AsmException;
+use ASM\Redis\RedisDriver;
 use ASM\Session;
 use ASM\SessionManager;
-
-use ASM\SessionManagerInterface;
 use ASM\Data;
 
-class RedisOpenSession implements Session
+class RedisSession implements Session
 {
 
     protected $sessionID = null;
@@ -38,7 +37,7 @@ class RedisOpenSession implements Session
 //    protected $lockNumber;
 
 
-    function __construct($sessionID, RedisDriver $redisDriver, SessionManagerInterface $sessionManager)
+    function __construct($sessionID, RedisDriver $redisDriver, SessionManager $sessionManager)
     {
         $this->sessionID = $sessionID;
         $this->redisDriver = $redisDriver;
@@ -139,6 +138,12 @@ class RedisOpenSession implements Session
 
         return $this->data;
     }
+
+    function setData(array $data)
+    {
+        $this->data = $data;
+    }
+    
     
     function save()
     {

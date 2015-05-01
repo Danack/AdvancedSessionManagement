@@ -44,8 +44,3 @@ class SimpleProfile
         return json_encode($data);
     }
 }
-
-
-
-
- 

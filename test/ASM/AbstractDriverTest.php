@@ -2,7 +2,6 @@
 
 namespace ASM\Tests;
 
-use ASM\Mock\MockSessionManager;
 
 abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase {
 
@@ -17,7 +16,7 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase {
     }
 
     /**
-     * @return \ASM\Driver\Driver
+     * @return \ASM\Driver
      */
     abstract function getDriver();
 
@@ -25,20 +24,27 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase {
     function testOpenInvalidSession()
     {
         $driver = $this->getDriver();
-        $driver->openSession(12345, new MockSessionManager());
+        //$sessionManager = $this->injector->make('ASM\SessionManager');
+        $sessionManager = createSessionManager($driver);
+        $driver->openSession(12345, $sessionManager);
     }
     
 
     function testCreate() {
         $driver = $this->getDriver();
         $data = ['foo' => 'bar'.rand(100000000, 1000000000)];
-        
-        $openDriver = $driver->createSession(new MockSessionManager());
-        $openDriver->saveData($data);
+
+        $sessionManager1 = createSessionManager($driver);
+        $openDriver = $driver->createSession($sessionManager1);
+        $openDriver->setData($data);
+        $openDriver->save();
         $sessionID = $openDriver->getSessionID();
         $openDriver->close();
 
-        $reopenedSession = $driver->openSession($sessionID, new MockSessionManager());
+        //$sessionManager2 = $this->injector->make('ASM\SessionManager');
+        $sessionManager2 = createSessionManager($driver);
+        
+        $reopenedSession = $driver->openSession($sessionID, $sessionManager2);
         $this->assertInstanceOf('ASM\Session', $reopenedSession);
 
         $readData = $reopenedSession->loadData();
@@ -46,7 +52,9 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase {
 
         //Delete and test no longer openable
         $driver->deleteSession($sessionID);
-        $sessionAfterDelete = $driver->openSession($sessionID, new MockSessionManager());        
+        //$sessionManager3 = $this->injector->make('ASM\SessionManager');
+        $sessionManager3 = createSessionManager($driver);
+        $sessionAfterDelete = $driver->openSession($sessionID, $sessionManager3);        
         $this->assertNull($sessionAfterDelete);
     }
     

@@ -6,7 +6,11 @@ namespace ASM\Tests;
 use org\bovigo\vfs\vfsStream;
 use org\bovigo\vfs\vfsStreamDirectory;
 
-use ASM\Mock\MockSessionManager;
+
+use ASM\Serializer\PHPSerializer;
+use ASM\IdGenerator\RandomLibIdGenerator;
+use ASM\File\FileDriver;
+use ASM\SessionConfig;
 
 class FileDriverTest extends AbstractDriverTest {
     function getDriver() {
@@ -18,29 +22,26 @@ class FileDriverTest extends AbstractDriverTest {
         $path = "./sessfiletest/subdir".rand(1000000, 10000000);
         @mkdir($path, true);
 
-        return $this->injector->make('ASM\Driver\FileDriver', [':path' => $path]);
+        return $this->injector->make('ASM\File\FileDriver', [':path' => $path]);
     }
     
     
     function testEmptyDirNotAcceptable()
     {
         $this->setExpectedException('ASM\AsmException');
-        $this->injector->make('ASM\Driver\FileDriver', [':path' => ""]);
+        $this->injector->make('ASM\File\FileDriver', [':path' => ""]);
     }
 
-    function testCreate()
-    {
-        parent::testCreate();
-    }
 
     /**
-     * This just covers a few lines in the constructor of ASM\Driver\FileDriver
+     * This test just covers a few lines in the constructor of ASM\Driver\FileDriver
+     * it has no behaviour to test.
      * @throws \Auryn\InjectorException
      */
     function testCoverage()
     {
-        $serializer = new \ASM\PHPSerializer();
-        $idGenerator = new \ASM\StandardIDGenerator();
+        $serializer = new PHPSerializer();
+        $idGenerator = new RandomLibIdGenerator();
 
         $path = "./sessfiletest/subdir".rand(1000000, 10000000);
         @mkdir($path, true);
@@ -51,7 +52,7 @@ class FileDriverTest extends AbstractDriverTest {
         $this->injector->alias('ASM\IDGenerator', get_class($idGenerator));
         $this->injector->share($idGenerator);
 
-        $fileDriver = new \ASM\Driver\FileDriver($path, $serializer, $idGenerator);
+        $fileDriver = new \ASM\File\FileDriver($path, $serializer, $idGenerator);
     }
     
     function testUnwriteable()
@@ -59,8 +60,12 @@ class FileDriverTest extends AbstractDriverTest {
         $this->setExpectedException('ASM\AsmException');
         $vfsStreamDirectory = vfsStream::newDirectory('sessionTest', 0);        
         $path = $vfsStreamDirectory->url();
-        $fileDriver = $this->injector->make('ASM\Driver\FileDriver', [':path' => $path]);
-        $fileDriver->createSession(new MockSessionManager());
+        $fileDriver = $this->injector->make('ASM\File\FileDriver', [':path' => $path]);
+//        new SessionConfig();
+        //$sessionManager = $this->injector->make('ASM\SessionManager', [':sessionName' => 'testUnwriteable']);
+
+        $sessionManager = createSessionManager($fileDriver);
+        $fileDriver->createSession($sessionManager);
     }    
 }
 

@@ -43,6 +43,10 @@ interface Session
      */
     function &getData();
     
+    function setData(array $data);
+    
+    
+    
     function save();
     
     /**

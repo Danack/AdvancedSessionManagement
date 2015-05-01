@@ -1,7 +1,9 @@
 <?php
 
 
-namespace ASM;
+namespace ASM\Serializer;
+
+use ASM\Serializer;
 
 class JsonSerializer implements Serializer
 {

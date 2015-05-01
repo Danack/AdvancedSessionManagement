@@ -2,11 +2,10 @@
 
 namespace ASM;
 
-use ASM\Driver\Driver as SessionDriver;
+use ASM\Driver as SessionDriver;
 
-class SessionManager implements SessionManagerInterface
+class SessionManager
 {
-
     const READ_ONLY = 'READ_ONLY';
     const WRITE_LOCK = 'WRITE_LOCK';
 
@@ -23,7 +22,7 @@ class SessionManager implements SessionManagerInterface
 
 
     /**
-     * @var \ASM\Driver\Driver
+     * @var \ASM\Driver
      */
     protected $driver;
 
@@ -46,7 +45,6 @@ class SessionManager implements SessionManagerInterface
      */
     function __construct(
         SessionConfig $sessionConfig,
-        $openMode,
         $cookieData,
         SessionDriver $driver,
         ValidationConfig $validationConfig = null)

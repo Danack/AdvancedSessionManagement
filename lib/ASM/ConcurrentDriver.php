@@ -1,8 +1,10 @@
 <?php
 
 
-namespace ASM\Driver;
+namespace ASM;
 
+
+use ASM\Driver;
 
 interface ConcurrentDriver extends Driver
 {

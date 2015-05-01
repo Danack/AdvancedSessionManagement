@@ -2,7 +2,8 @@
 
 namespace ASM\Tests;
 
-use \ASM\PHPSerializer;
+
+use ASM\Serializer\PHPSerializer;
 
 class SerializerTest extends \PHPUnit_Framework_TestCase {
 

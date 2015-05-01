@@ -1,12 +1,14 @@
 <?php
 
-namespace ASM\Driver;
+namespace ASM\File;
 
+use ASM\Driver;
+use ASM\File\FileSession;
 use ASM\Serializer;
 use ASM\IDGenerator;
 use ASM\AsmException;
 use ASM\SessionManager;
-use ASM\SessionManagerInterface;
+
 
 class FileDriver implements Driver
 {
@@ -20,6 +22,8 @@ class FileDriver implements Driver
     const ZOMBIE_FILE = 'zombie_file';
 
     private $path;
+    
+    private $data;
 
     /**
      * @var Serializer
@@ -51,14 +55,14 @@ class FileDriver implements Driver
             $this->serializer = $serializer;
         }
         else {
-            $this->serializer = new \ASM\PHPSerializer();
+            $this->serializer = new \ASM\Serializer\PHPSerializer();
         }
 
         if ($idGenerator) {
             $this->idGenerator = $idGenerator;
         }
         else {
-            $this->idGenerator = new \ASM\StandardIDGenerator();
+            $this->idGenerator = new \ASM\IdGenerator\RandomLibIdGenerator();
         }
     }
 
@@ -66,29 +70,31 @@ class FileDriver implements Driver
      * Open an existing session. Returns either the session data or null if
      * the session could not be found.
      * @param $sessionID
+     * @param SessionManager $sessionManager
      * @return string|null
      */
-    function openSession($sessionID, SessionManagerInterface $sessionManager)
+    function openSession($sessionID, SessionManager $sessionManager)
     {
         $filename = $this->generateFilenameForData($sessionID);
         if (file_exists($filename) == false) {
             return null;
         }
 
-        return new FileOpenSession($sessionID, $this, $sessionManager);
+        return new FileSession($sessionID, $this, $sessionManager);
     }
 
     /**
      * Create a new session.
+     * @param SessionManager $sessionManager
      * @return string The newly created session ID.
      */
-    function createSession(SessionManagerInterface $sessionManager)
+    function createSession(SessionManager $sessionManager)
     {
         list($sessionID, $fileHandle) = $this->createNewSessionFile();
         $dataString = $this->serializer->serialize([]);
         fwrite($fileHandle, $dataString);
 
-        return new FileOpenSession($sessionID, $this, $sessionManager);
+        return new FileSession($sessionID, $this, $sessionManager);
     }
 
     /**
@@ -131,6 +137,8 @@ class FileDriver implements Driver
     {
         return $this->path.'/'.$sessionID.".data";
     }
+
+
 
     /**
      * @param $sessionID

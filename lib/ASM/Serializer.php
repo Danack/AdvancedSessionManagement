@@ -6,7 +6,6 @@ namespace ASM;
 
 interface Serializer
 {
-
     /**
      * Convert a value into a string representation.
      * @param array $data

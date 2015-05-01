@@ -9,8 +9,8 @@ use ASM\SimpleProfile;
 use ASM\ValidationConfig;
 
 use Predis\Client as RedisClient;
-use ASM\Driver\RedisDriver;
-use ASM\JsonSerializer;
+use ASM\Redis\RedisDriver;
+use ASM\Serializer\JsonSerializer;
 
 class SessionTest extends \PHPUnit_Framework_TestCase {
 
@@ -39,7 +39,6 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $redisDriver = new RedisDriver($redisClient, $serializer);
         $session = new SessionManager(
             $this->sessionConfig,
-            SessionManager::READ_ONLY,
             $cookieData,
             $redisDriver,
             $validationConfig
@@ -145,7 +144,8 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $sessionLoader = $this->createSessionManager($cookieData);
         $newSession = $sessionLoader->createSession();
         $srcData = ['foo' => 'bar'];
-        $newSession->saveData($srcData);
+        $newSession->setData($srcData);
+        $newSession->save();
         $sessionID = $newSession->getSessionID();
         $newSession->close();
 
@@ -167,7 +167,8 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $sessionLoader = $this->createSessionManager($cookieData);
         $newSession = $sessionLoader->createSession();
         $srcData = ['foo' => 'bar'.rand(1000000, 1000000)];
-        $newSession->saveData($srcData);
+        $newSession->setData($srcData);
+        $newSession->save();
         $sessionID = $newSession->getSessionID();
         $newSession->close();
 
@@ -190,7 +191,8 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $sessionLoader = $this->createSessionManager($cookieData);
         $newSession = $sessionLoader->createSession();
         $srcData = ['foo' => 'bar'];
-        $newSession->saveData($srcData);
+        $newSession->setData($srcData);
+        $newSession->save();
         $sessionID = $newSession->getSessionID();
         $newSession->close();
 
@@ -312,7 +314,6 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
 
         $sessionLoader = new SessionManager(
             $this->sessionConfig,
-            SessionManager::READ_ONLY,
             $cookieData = [],
             $redisDriver
         );
@@ -320,7 +321,7 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $this->setExpectedException(
             'ASM\AsmException',
             null,
-            \ASM\Driver\Driver::E_SESSION_ID_CLASS
+            \ASM\Driver::E_SESSION_ID_CLASS
         );
 
         $session1 = $sessionLoader->createSession();

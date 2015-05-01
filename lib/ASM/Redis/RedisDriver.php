@@ -1,12 +1,15 @@
 <?php
 
-namespace ASM\Driver;
+namespace ASM\Redis;
 
-use ASM\Serializer;
-use ASM\IDGenerator;
-use Predis\Client as RedisClient;
 use ASM\AsmException;
+use ASM\Driver;
+
+use ASM\IDGenerator;
+use ASM\Serializer;
 use ASM\SessionManager;
+use Predis\Client as RedisClient;
+
 
 use ASM\SessionManagerInterface;
 
@@ -61,6 +64,7 @@ function generateAsyncKey($sessionID)
 
     return $key;
 }
+
 
 
 class RedisDriver implements Driver
@@ -126,16 +130,14 @@ END;
 
         if ($serializer) {
             $this->serializer = $serializer;
-        }
-        else {
-            $this->serializer = new \ASM\PHPSerializer();
+        } else {
+            $this->serializer = new \ASM\Serializer\PHPSerializer();
         }
 
         if ($idGenerator) {
             $this->idGenerator = $idGenerator;
-        }
-        else {
-            $this->idGenerator = new \ASM\StandardIDGenerator();
+        } else {
+            $this->idGenerator = new \ASM\IdGenerator\RandomLibIdGenerator();
         }
     }
 
@@ -147,11 +149,11 @@ END;
      * @param SessionManager $sessionManager
      * @return string|null
      */
-    function openSession($sessionID, SessionManagerInterface $sessionManager)
+    function openSession($sessionID, SessionManager $sessionManager)
     {
         $dataKey = generateSessionDataKey($sessionID);
         if ($this->redisClient->exists($dataKey)) {
-            return new RedisOpenSession($sessionID, $this, $sessionManager);
+            return new RedisSession($sessionID, $this, $sessionManager);
         }
 
         return null;
@@ -159,11 +161,11 @@ END;
 
     /**
      * Create a new session
-     * @return RedisOpenSession
+     * @return RedisSession
      * @param SessionManager $sessionManager
      * @throws AsmException
      */
-    function createSession(SessionManagerInterface $sessionManager)
+    function createSession(SessionManager $sessionManager)
     {
         $sessionLifeTime = $sessionManager->getLifetime();
 
@@ -180,13 +182,13 @@ END;
             );
 
             if ($set) {
-                return new RedisOpenSession($sessionID, $this, $sessionManager);
+                return new RedisSession($sessionID, $this, $sessionManager);
             }
         }
 
         throw new AsmException(
             "Failed to createSession.",
-            \ASM\Driver\Driver::E_SESSION_ID_CLASS
+            \ASM\Driver::E_SESSION_ID_CLASS
         );
     }
 
@@ -436,4 +438,3 @@ END;
 //        $this->redisClient->rpush($profileKey, $sessionProfiles);
 //    }
 }
-

@@ -3,7 +3,8 @@
 namespace ASM\Tests;
 
 
-use \ASM\StandardIDGenerator;
+
+use ASM\IdGenerator\RandomLibIdGenerator;
 
 class IDGeneratorTest extends \PHPUnit_Framework_TestCase {
 
@@ -11,7 +12,7 @@ class IDGeneratorTest extends \PHPUnit_Framework_TestCase {
      * Basic lock functionality
      */
     function testSerialization() {        
-        $idGenerator = new StandardIDGenerator();
+        $idGenerator = new RandomLibIdGenerator();
         $sessionID = $idGenerator->generateSessionID();
         
         $this->assertInternalType('string', $sessionID);

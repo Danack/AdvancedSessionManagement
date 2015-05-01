@@ -1,12 +1,13 @@
 <?php
 
 
-namespace ASM;
+namespace ASM\IdGenerator;
 
 use RandomLib\Factory;
+use ASM\IDGenerator;
 
 
-class StandardIDGenerator implements IDGenerator
+class RandomLibIdGenerator implements IdGenerator
 {
 
     /**
