@@ -5,7 +5,7 @@
 namespace ASM\Tests;
 
 use ASM\SessionManager;
-use ASM\SimpleProfile;
+
 use ASM\ValidationConfig;
 
 class ValidationConfigTest extends \PHPUnit_Framework_TestCase {

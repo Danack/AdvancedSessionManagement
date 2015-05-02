@@ -63,7 +63,7 @@ function createSessionManager(ASM\Driver $driver)
         10
     );
 
-    return new ASM\SessionManager($sessionConfig, [], $driver);
+    return new ASM\SessionManager($sessionConfig, $driver);
 }
 
 

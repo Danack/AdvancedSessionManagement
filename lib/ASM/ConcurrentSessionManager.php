@@ -13,13 +13,11 @@ class ConcurrentSessionManager extends SessionManager
 {
     function __construct(
         SessionConfig $sessionConfig,
-        $cookieData,
         ConcurrentDriver $driver,
         ValidationConfig $validationConfig = null)
     {
         parent::__construct(
             $sessionConfig,
-            $cookieData,
             $driver,
             $validationConfig
         );

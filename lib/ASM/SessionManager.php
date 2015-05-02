@@ -32,11 +32,6 @@ class SessionManager
     const lockSleepTime = 1000;
 
     /**
-     * @var
-     */
-    private $cookieData;
-
-    /**
      * @param SessionConfig $sessionConfig
      * @param $openMode
      * @param $cookieData
@@ -45,13 +40,11 @@ class SessionManager
      */
     function __construct(
         SessionConfig $sessionConfig,
-        $cookieData,
         SessionDriver $driver,
         ValidationConfig $validationConfig = null)
     {
         $this->sessionConfig = $sessionConfig;
         $this->driver = $driver;
-        $this->cookieData = $cookieData;
 
         if ($validationConfig) {
             $this->validationConfig = $validationConfig;
@@ -92,13 +85,13 @@ class SessionManager
      * @throws AsmException
      * @throws FailedToAcquireLockException
      */
-    public function openSession($userProfile = null)
+    public function openSession(array $cookieData, $userProfile = null)
     {
-        if (!array_key_exists($this->sessionConfig->getSessionName(), $this->cookieData)) {
+        if (!array_key_exists($this->sessionConfig->getSessionName(), $cookieData)) {
             return null;
         }
 
-        $sessionID = $this->cookieData[$this->sessionConfig->getSessionName()];
+        $sessionID = $cookieData[$this->sessionConfig->getSessionName()];
         $openDriver = $this->driver->openSession($sessionID, $this);
         
 //        list($sessionID, $data) = $this->loadData($sessionID);
@@ -129,15 +122,10 @@ class SessionManager
      * @throws AsmException
      * @throws FailedToAcquireLockException
      */
-    function createSession($userProfile = null)
+    function createSession(array $cookieData, $userProfile = null)
     {
-        $existingSession = $this->openSession($userProfile);
+        $existingSession = $this->openSession($cookieData, $userProfile);
 
-//        var_dump($this->cookieData);
-//        var_dump($existingSession);
-//        exit(0);
-//        
-        
         if ($existingSession) {
             return $existingSession;
         }

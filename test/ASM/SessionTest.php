@@ -33,13 +33,12 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
      * @param \ASM\SimpleProfile $sessionProfile
      * @return SessionManager
      */
-    function createSessionManager($cookieData, ValidationConfig $validationConfig = null, SimpleProfile $sessionProfile = null) {
+    function createSessionManager(ValidationConfig $validationConfig = null, SimpleProfile $sessionProfile = null) {
         $redisClient = new RedisClient($this->redisConfig, $this->redisOptions);
         $serializer = new JsonSerializer();
         $redisDriver = new RedisDriver($redisClient, $serializer);
         $session = new SessionManager(
             $this->sessionConfig,
-            $cookieData,
             $redisDriver,
             $validationConfig
         );
@@ -115,8 +114,8 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
             $this->sessionName => $sessionID,
         ];
         
-        $sessionLoader = $this->createSessionManager($cookieData, $validationConfig);
-        $openSession = $sessionLoader->openSession();
+        $sessionLoader = $this->createSessionManager($validationConfig);
+        $openSession = $sessionLoader->openSession($cookieData);
         $this->assertNull($openSession);
         $this->assertTrue($wasCalled, "invalidAccessCallable was not called.");
     }
@@ -132,8 +131,8 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
             $this->sessionName => $sessionID,
         ];
 
-        $sessionLoader = $this->createSessionManager($cookieData);
-        $openSession = $sessionLoader->openSession();
+        $sessionLoader = $this->createSessionManager();
+        $openSession = $sessionLoader->openSession($cookieData);
         $this->assertNull($openSession);
     }
 
@@ -141,8 +140,8 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
     function testCreateSessionThenReopen()
     {
         $cookieData = [];
-        $sessionLoader = $this->createSessionManager($cookieData);
-        $newSession = $sessionLoader->createSession();
+        $sessionManager = $this->createSessionManager();
+        $newSession = $sessionManager->createSession($cookieData);
         $srcData = ['foo' => 'bar'];
         $newSession->setData($srcData);
         $newSession->save();
@@ -153,8 +152,8 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
             $this->sessionName => $sessionID
         ];
 
-        $sessionLoader2 = $this->createSessionManager($cookieData);
-        $reopenedSession = $sessionLoader2->openSession();        
+        $sessionManager2 = $this->createSessionManager();
+        $reopenedSession = $sessionManager2->openSession($cookieData);        
         $this->assertInstanceOf('ASM\Session', $reopenedSession);
         $dataLoaded = $reopenedSession->loadData();
         $this->assertEquals($srcData, $dataLoaded);
@@ -164,8 +163,8 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
     function testCreateSessionThenRecreate()
     {
         $cookieData = [];
-        $sessionLoader = $this->createSessionManager($cookieData);
-        $newSession = $sessionLoader->createSession();
+        $sessionManager = $this->createSessionManager();
+        $newSession = $sessionManager->createSession($cookieData);
         $srcData = ['foo' => 'bar'.rand(1000000, 1000000)];
         $newSession->setData($srcData);
         $newSession->save();
@@ -176,8 +175,8 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
             $this->sessionName => $sessionID
         ];
 
-        $sessionLoader2 = $this->createSessionManager($cookieData);
-        $reopenedSession = $sessionLoader2->createSession();
+        $sessionManager2 = $this->createSessionManager();
+        $reopenedSession = $sessionManager2->createSession($cookieData);
         $this->assertInstanceOf('ASM\Session', $reopenedSession);
         $dataLoaded = $reopenedSession->loadData();
         $this->assertEquals($srcData, $dataLoaded);
@@ -188,23 +187,23 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
     function testCreateSessionDeleteThenReopen()
     {
         $cookieData = [];
-        $sessionLoader = $this->createSessionManager($cookieData);
-        $newSession = $sessionLoader->createSession();
+        $sessionManager = $this->createSessionManager();
+        $newSession = $sessionManager->createSession($cookieData);
         $srcData = ['foo' => 'bar'];
         $newSession->setData($srcData);
         $newSession->save();
         $sessionID = $newSession->getSessionId();
         $newSession->close();
 
-        $sessionLoader->deleteSession($sessionID);
+        $sessionManager->deleteSession($sessionID);
 
         $cookieData = [
             $this->sessionName => $sessionID
         ];
 
-        $sessionLoader2 = $this->createSessionManager($cookieData);
+        $sessionManager2 = $this->createSessionManager();
         //The session should no longer exist.
-        $reopenedSession = $sessionLoader2->openSession();
+        $reopenedSession = $sessionManager2->openSession($cookieData);
         $this->assertNull($reopenedSession);
     }
     
@@ -314,7 +313,6 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
 
         $sessionLoader = new SessionManager(
             $this->sessionConfig,
-            $cookieData = [],
             $redisDriver
         );
         
@@ -324,8 +322,8 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
             \ASM\Driver::E_SESSION_ID_CLASS
         );
 
-        $session1 = $sessionLoader->createSession();
-        $session2 = $sessionLoader->createSession();
+        $session1 = $sessionLoader->createSession([]);
+        $session2 = $sessionLoader->createSession([]);
     }
 }
 

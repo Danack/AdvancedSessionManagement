@@ -12,9 +12,10 @@ use ASM\ValidationConfig;
 use Predis\Client as RedisClient;
 use ASM\Redis\RedisDriver;
 use ASM\ConcurrentSession;
+use ASM\IDGenerator;
 
 
-class ConcurrentSessionTest extends \PHPUnit_Framework_TestCase {
+abstract class AbstractConcurrentSessionTest extends \PHPUnit_Framework_TestCase {
 
 
     /**
@@ -37,35 +38,37 @@ class ConcurrentSessionTest extends \PHPUnit_Framework_TestCase {
      *
      */
     protected function setUp() {
-    //    $this->provider = createProvider();
+
         $sessionConfig = new SessionConfig(
             'SessionTest',
             1000,
             60
         );
 
-        $redisClient = new RedisClient(getRedisConfig(), getRedisOptions());
         $idGenerator = new \ASM\IdGenerator\RandomLibIdGenerator();
-        $this->redisDriver = new RedisDriver(
-            $redisClient,
-            null,
-            $idGenerator
-        );
+        $this->redisDriver = $this->getDriver($idGenerator);
 
         $this->sessionManager = new ConcurrentSessionManager(
             $sessionConfig,
-            $cookieData = [],
             $this->redisDriver
         );
     }
 
+    /**
+     * @param IdGenerator $idGenerator
+     * @return \ASM\ConcurrentDriver
+     */
+    abstract public function getDriver(IdGenerator $idGenerator);
+
 
     /**
+     * @param ValidationConfig $validationConfig
+     * @param SimpleProfile $sessionProfile
      * @return ConcurrentSession
      */
     function createEmptySession(ValidationConfig $validationConfig = null, SimpleProfile $sessionProfile = null) {
 
-        return $this->sessionManager->createSession();
+        return $this->sessionManager->createSession([]);
     }
 
     
@@ -135,29 +138,5 @@ class ConcurrentSessionTest extends \PHPUnit_Framework_TestCase {
         $session2->clearList($key);
         $currentValue = $session1->getList($key);
         $this->assertEquals([], $currentValue, "Getting list after clearing failed.");
-    }
-    
-//$session1->set('percentComplete', '50');
-//$value2 = $session2->get('percentComplete');
-//$this->assertEquals('50', $value2);
-
-    /**
-     * 
-     */
-//    function testAsyncList() {
-//        $session1 = $this->createEmptySession();
-//        $session2 = $this->createSecondSession($session1);
-//        $list = 'foo';
-//        $session1->appendToList($list, 'bar');
-//        $result = $session2->getList($list);
-//        $this->assertCount(1, $result);
-//        $this->assertEquals('bar', $result[0]);
-//        $session1->clearList($list);
-//        $result = $session2->getList($list);
-//        $this->assertEmpty($result);
-//    }
-
-    function testBeQuietPHPUnit() {
-
     }
 }

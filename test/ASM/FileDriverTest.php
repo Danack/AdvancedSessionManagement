@@ -9,8 +9,7 @@ use org\bovigo\vfs\vfsStreamDirectory;
 
 use ASM\Serializer\PHPSerializer;
 use ASM\IdGenerator\RandomLibIdGenerator;
-use ASM\File\FileDriver;
-use ASM\SessionConfig;
+
 
 class FileDriverTest extends AbstractDriverTest {
     function getDriver() {
