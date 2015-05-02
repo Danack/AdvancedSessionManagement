@@ -3,7 +3,7 @@
 namespace ASM\Redis;
 
 use ASM\AsmException;
-use ASM\Driver;
+use ASM\ConcurrentDriver;
 
 use ASM\IDGenerator;
 use ASM\Serializer;
@@ -55,7 +55,6 @@ function generateProfileKey($sessionID)
 
 /**
  * @param $sessionID
- * @internal param null $index
  * @return string
  */
 function generateAsyncKey($sessionID)
@@ -67,7 +66,7 @@ function generateAsyncKey($sessionID)
 
 
 
-class RedisDriver implements Driver
+class RedisDriver implements ConcurrentDriver
 {
 
     /**
@@ -437,4 +436,80 @@ END;
 //        $this->redisClient->del($profileKey);
 //        $this->redisClient->rpush($profileKey, $sessionProfiles);
 //    }
+
+    /**
+     * @param $sessionID
+     * @param $index
+     * @return int
+     */
+    function get($sessionID, $index) {
+        $key = generateAsyncKey($sessionID, $index);
+
+        return $this->redisClient->hget($key, $index);
+    }
+
+
+    /**
+     * @param $sessionID
+     * @param $index
+     * @param $value
+     * @return int
+     */
+    function set($sessionID, $index, $value) {
+        $key = generateAsyncKey($sessionID, $index);
+
+        return $this->redisClient->hset($key, $index, $value);
+    }
+
+
+    /**
+     * @param $sessionID
+     * @param $index
+     * @param $increment
+     * @return int
+     */
+    function increment($sessionID, $index, $increment) {
+        $key = generateAsyncKey($sessionID, $index);
+
+        return $this->redisClient->hincrby($key, $index, $increment);
+    }
+
+    /**
+     * @param $sessionID
+     * @param $index
+     * @return array
+     */
+    function getList($sessionID, $index) {
+        $key = generateAsyncKey($sessionID, $index);
+
+        return $this->redisClient->lrange($key, 0, -1);
+    }
+
+    /**
+     * @param $sessionID
+     * @param $key
+     * @param $value
+     * @return int
+     */
+    function appendToList($sessionID, $index, $value) {
+
+        $key = generateAsyncKey($sessionID, $index);
+        
+        if (is_array($value)) {
+            return $this->redisClient->rpush($key, $value);
+        }
+        else {
+            return $this->redisClient->rpush($key, [$value]);
+        }
+    }
+
+    /**
+     * @param $sessionID
+     * @param $index
+     * @return int
+     */
+    function clearList($sessionID, $index) {
+        $key = generateAsyncKey($sessionID, $index);
+        return $this->redisClient->del($key);
+    }
 }

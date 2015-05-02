@@ -18,7 +18,6 @@ class FileDriverTest extends AbstractDriverTest {
 //        $path = vfsStream::url('sessionTest');
 //        // this is showing errors
 //        //return $this->injector->make('ASM\Driver\FileDriver', [':path' => $path]);
-
         $path = "./sessfiletest/subdir".rand(1000000, 10000000);
         @mkdir($path, true);
 

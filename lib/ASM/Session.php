@@ -24,7 +24,7 @@ interface Session
     /**
      * @return mixed
      */
-    function getSessionID();
+    function getSessionId();
 
     /**
      * @return mixed

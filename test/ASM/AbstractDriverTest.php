@@ -38,7 +38,7 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase {
         $openDriver = $driver->createSession($sessionManager1);
         $openDriver->setData($data);
         $openDriver->save();
-        $sessionID = $openDriver->getSessionID();
+        $sessionID = $openDriver->getSessionId();
         $openDriver->close();
 
         //$sessionManager2 = $this->injector->make('ASM\SessionManager');

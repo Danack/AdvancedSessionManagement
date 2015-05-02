@@ -4,20 +4,22 @@
 namespace ASM;
 
 
-use ASM\Driver;
 
 interface ConcurrentDriver extends Driver
 {
 
-    function get($sessionID, $index);
 
-    function set($sessionID, $index, $value);
+    function get($sessionId, $index);
 
-    function increment($sessionID, $index, $increment);
+    function set($sessionId, $index, $value);
 
-    function getList($sessionID, $index);
+    function increment($sessionId, $index, $increment);
 
-    function appendToList($sessionID, $key, $value);
+    function getList($sessionId, $index);
 
-    function clearList($sessionID, $index);
+    function appendToList($sessionId, $key, $value);
+
+    function clearList($sessionId, $index);
+    
 }
+

@@ -146,7 +146,7 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $srcData = ['foo' => 'bar'];
         $newSession->setData($srcData);
         $newSession->save();
-        $sessionID = $newSession->getSessionID();
+        $sessionID = $newSession->getSessionId();
         $newSession->close();
 
         $cookieData = [
@@ -169,7 +169,7 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $srcData = ['foo' => 'bar'.rand(1000000, 1000000)];
         $newSession->setData($srcData);
         $newSession->save();
-        $sessionID = $newSession->getSessionID();
+        $sessionID = $newSession->getSessionId();
         $newSession->close();
 
         $cookieData = [
@@ -193,7 +193,7 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $srcData = ['foo' => 'bar'];
         $newSession->setData($srcData);
         $newSession->save();
-        $sessionID = $newSession->getSessionID();
+        $sessionID = $newSession->getSessionId();
         $newSession->close();
 
         $sessionLoader->deleteSession($sessionID);

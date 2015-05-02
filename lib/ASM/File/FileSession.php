@@ -64,7 +64,7 @@ class FileSession implements Session
     /**
      * @return mixed
      */
-    function getSessionID()
+    function getSessionId()
     {
         return $this->sessionID;
     }
