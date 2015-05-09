@@ -33,8 +33,6 @@ class SessionManager
 
     /**
      * @param SessionConfig $sessionConfig
-     * @param $openMode
-     * @param $cookieData
      * @param SessionDriver $driver
      * @param ValidationConfig $validationConfig
      */
@@ -80,10 +78,9 @@ class SessionManager
      * Opens and returns the data for an existing session, if and only if the
      * client sent a valid existing session ID. Otherwise returns null.
      *
+     * @param array $cookieData
      * @param null $userProfile
-     * @return null|\ASM\Session
-     * @throws AsmException
-     * @throws FailedToAcquireLockException
+     * @return Session|null
      */
     public function openSession(array $cookieData, $userProfile = null)
     {
@@ -92,11 +89,9 @@ class SessionManager
         }
 
         $sessionID = $cookieData[$this->sessionConfig->getSessionName()];
-        $openDriver = $this->driver->openSession($sessionID, $this);
-        
-//        list($sessionID, $data) = $this->loadData($sessionID);
+        $session = $this->driver->openSession($sessionID, $this, $userProfile);
 
-        if ($openDriver == null) {
+        if ($session == null) {
             $this->invalidSessionAccessed();
             return null;
         }
@@ -105,10 +100,7 @@ class SessionManager
 //            $this->acquireLock();
 //        }
 
-        // Existing session was opened
-        //$this->performProfileSecurityCheck($userProfile);
-
-        return $openDriver;
+        return $session;
     }
 
     /**
@@ -117,10 +109,9 @@ class SessionManager
      * Opens and returns the data for an existing session, if and only if the
      * client sent a valid existing session ID. Otherwise creates a new session.
      *
+     * @param array $cookieData
      * @param $userProfile
-     * @return \ASM\Session
-     * @throws AsmException
-     * @throws FailedToAcquireLockException
+     * @return Session
      */
     function createSession(array $cookieData, $userProfile = null)
     {
@@ -130,7 +121,7 @@ class SessionManager
             return $existingSession;
         }
 
-        return $this->driver->createSession($this);
+        return $this->driver->createSession($this, $userProfile);
     }
 
 
@@ -306,48 +297,41 @@ class SessionManager
         call_user_func($invalidSessionAccessed, $this);
     }
 
-//    /**
-//     * @param $userProfile
-//     * @throws AsmException
-//     */
-//    function performProfileSecurityCheck($userProfile) {
-//        if ($userProfile === null) {
-//            return;
-//        }
-//
-//        if (is_string($userProfile) == false &&
-//            (!(is_object($userProfile) && method_exists($userProfile, '__toString')))) {
-//            throw new AsmException("userProfile must be a string or an object containing a __toString method.");
-//        }
-//
-//        $profileChangedCallable = $this->validationConfig->getProfileChangedCallable();
-//        if (!$profileChangedCallable) {
-//            return;
-//        }
-//
-//        $sessionProfiles = $this->driver->getStoredProfile($this->sessionID);
-//        $knownProfile = false;
-//        
-//        foreach ($sessionProfiles as $sessionProfile) {
-//            if ($userProfile === $sessionProfile) {
-//                $knownProfile = true;
-//                break;
-//            }
-//        }
-//        
-//        if ($knownProfile == false) {
-//            $newProfiles = call_user_func($profileChangedCallable, $this, $userProfile, $sessionProfiles);
-//            
-//            if (is_array($newProfiles) == false) {
-//                throw new AsmException("The profileChangedCallable must return an array of the allowed session profiles, but instead a ".gettype($newProfiles)."was returned");
-//            }
-//            
-//            $this->driver->storeSessionProfiles(
-//                $this->sessionID,
-//                $newProfiles
-//            );
-//        }
-//    }
+    /**
+     * @param $newProfile
+     * @param $existingProfiles
+     * @return mixed|null
+     * @throws AsmException
+     */
+    function performProfileSecurityCheck($newProfile, $existingProfiles) {
+        if ($newProfile === null) {
+            return $existingProfiles;
+        }
+
+        if (is_string($newProfile) == false &&
+            (!(is_object($newProfile) && method_exists($newProfile, '__toString')))) {
+            throw new AsmException("userProfile must be a string or an object containing a __toString method.");
+        }
+
+        $profileChangedCallable = $this->validationConfig->getProfileChangedCallable();
+        if (!$profileChangedCallable) {
+            return $existingProfiles;
+        }
+
+        foreach ($existingProfiles as $sessionProfile) {
+            if ($newProfile === $sessionProfile) {
+                return $existingProfiles;
+            }
+        }
+
+        $newProfiles = call_user_func($profileChangedCallable, $this, $newProfile, $existingProfiles);
+        
+        if (is_array($newProfiles) == false) {
+            throw new AsmException("The profileChangedCallable must return an array of the allowed session profiles, but instead a ".gettype($newProfiles)."was returned");
+        }
+
+        return $newProfiles;
+    }
 
 //    /**
 //     * Add session profile to the approved session profile list

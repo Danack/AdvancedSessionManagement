@@ -76,7 +76,8 @@ abstract class AbstractConcurrentSessionTest extends \PHPUnit_Framework_TestCase
         return new RedisSession(
             $session1->getSessionId(),
             $this->redisDriver,
-            $this->sessionManager
+            $this->sessionManager,
+            [], []
         );
     }
 

@@ -6,7 +6,7 @@ namespace ASM;
 
 interface Session
 {
-    function isPersisted();
+
 
     function getHeaders($caching,
                         $lastModifiedTime = null,
@@ -18,36 +18,29 @@ interface Session
     /**
      * @return mixed
      */
-    function close();
-
-
-    /**
-     * @return mixed
-     */
     function getSessionId();
-
-    /**
-     * @return mixed
-     */
-    function loadData();
-
-
-//    /**
-//     * @param string $data
-//     */
-    //function saveData($data);
-
 
     /**
      * @return array
      */
     function &getData();
-    
+
+    /**
+     * @param array $data
+     * @return mixed
+     */
     function setData(array $data);
-    
-    
-    
+
+    /**
+     * @return mixed
+     */
     function save();
+
+    /**
+     * @param bool $saveData
+     * @return mixed
+     */
+    function close($saveData = true);
     
     /**
      * Test whether the driver thinks the data is locked. The result may

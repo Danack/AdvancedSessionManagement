@@ -18,7 +18,7 @@ class FileDriverTest extends AbstractDriverTest {
 //        // this is showing errors
 //        //return $this->injector->make('ASM\Driver\FileDriver', [':path' => $path]);
         $path = "./sessfiletest/subdir".rand(1000000, 10000000);
-        @mkdir($path, true);
+        @mkdir($path, 0755, true);
 
         return $this->injector->make('ASM\File\FileDriver', [':path' => $path]);
     }
@@ -42,7 +42,7 @@ class FileDriverTest extends AbstractDriverTest {
         $idGenerator = new RandomLibIdGenerator();
 
         $path = "./sessfiletest/subdir".rand(1000000, 10000000);
-        @mkdir($path, true);
+        @mkdir($path, 0755, true);
 
         $this->injector->alias('ASM\Serializer', get_class($serializer));
         $this->injector->share($serializer);

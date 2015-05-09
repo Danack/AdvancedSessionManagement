@@ -5,7 +5,7 @@ namespace ASM\Redis;
 use ASM\AsmException;
 use ASM\ConcurrentDriver;
 
-use ASM\IDGenerator;
+use ASM\IdGenerator;
 use ASM\Serializer;
 use ASM\SessionManager;
 use Predis\Client as RedisClient;
@@ -68,7 +68,6 @@ function generateAsyncKey($sessionID)
 
 class RedisDriver implements ConcurrentDriver
 {
-
     /**
      * @var \Predis\Client
      */
@@ -86,10 +85,9 @@ class RedisDriver implements ConcurrentDriver
 
 
     /**
-     * @var IDGenerator
+     * @var IdGenerator
      */
     private $idGenerator;
-
 
     /**
      * A redis lua script
@@ -108,6 +106,7 @@ else
 end
 END;
 
+
     /* # if the value of key is the same as arg
      * if redis.call("get",KEYS[1]) == ARGV[1]
      * then
@@ -123,7 +122,7 @@ END;
     function __construct(
         RedisClient $redisClient,
         Serializer $serializer = null,
-        IDGenerator $idGenerator = null)
+        IdGenerator $idGenerator = null)
     {
         $this->redisClient = $redisClient;
 
@@ -146,32 +145,71 @@ END;
      * the session could not be found.
      * @param $sessionID
      * @param SessionManager $sessionManager
-     * @return string|null
+     * @param null $userProfile
+     * @throws AsmException
+     * @return null|string
      */
-    function openSession($sessionID, SessionManager $sessionManager)
+    function openSession($sessionID, SessionManager $sessionManager, $userProfile = null)
     {
+        $sessionID = (string)$sessionID;
+        
         $dataKey = generateSessionDataKey($sessionID);
-        if ($this->redisClient->exists($dataKey)) {
-            return new RedisSession($sessionID, $this, $sessionManager);
+        $dataString = $this->redisClient->get($dataKey);
+        if ($dataString == null) {
+            return null;
         }
 
-        return null;
+        $fullData = $this->serializer->unserialize($dataString);
+        $currentProfiles = [];
+        $data = [];
+
+        //TODO - this should never be needed?
+        if (isset($fullData['profiles'])) {
+            $currentProfiles = $fullData['profiles'];
+        }
+
+        if (isset($fullData['data'])) {
+            $data = $fullData['data'];
+            //Data was not found?
+        }
+
+        $currentProfiles = $sessionManager->performProfileSecurityCheck(
+            $userProfile,
+            $currentProfiles
+        );
+
+        return new RedisSession(
+            $sessionID,
+            $this,
+            $sessionManager,
+            $data,
+            $currentProfiles
+        );
     }
 
     /**
      * Create a new session
      * @return RedisSession
      * @param SessionManager $sessionManager
+     * @param null $userProfile
      * @throws AsmException
      */
-    function createSession(SessionManager $sessionManager)
+    function createSession(SessionManager $sessionManager, $userProfile = null)
     {
         $sessionLifeTime = $sessionManager->getLifetime();
+        $initialData = [];
+        $profiles = [];
+        if ($userProfile) {
+            $profiles = [$userProfile];
+        }
+        $initialData['profiles'] = $profiles;
+        $initialData['data'] = [];
+        $dataString = $this->serializer->serialize($initialData);
 
         for ($count = 0; $count < 10; $count++) {
             $sessionID = $this->idGenerator->generateSessionID();
             $dataKey = generateSessionDataKey($sessionID);
-            $dataString = $this->serializer->serialize([]);
+
             $set = $this->redisClient->set(
                 $dataKey,
                 $dataString,
@@ -181,7 +219,13 @@ END;
             );
 
             if ($set) {
-                return new RedisSession($sessionID, $this, $sessionManager);
+                return new RedisSession(
+                    $sessionID,
+                    $this,
+                    $sessionManager,
+                    [],
+                    $profiles
+                );
             }
         }
 
@@ -201,32 +245,71 @@ END;
         $this->redisClient->del($dataKey);
     }
 
-    /**
-     * @param $sessionID
-     * @return mixed
-     * @throws AsmException
-     */
-    function read($sessionID)
-    {
-        $dataKey = generateSessionDataKey($sessionID);
-        $dataString = $this->redisClient->get($dataKey);
-        $data = $this->serializer->unserialize($dataString);
-
-        return $data;
-    }
+//    /**
+//     * @param $sessionID
+//     * @return mixed
+//     * @throws AsmException
+//     */
+//    function read($sessionID)
+//    {
+//        $dataKey = generateSessionDataKey($sessionID);
+//        //Todo - replace with atomic script
+//        
+//        
+////        if ($createIfNotExists) {
+////            $emptyData = [];
+////            $emptyData['profiles'] = [];
+////            $emptyData['data'] = [];
+////
+////            $emptyDataString = $this->serializer->serialize($emptyData);
+////            
+////            $dataString = $this->redisClient->eval(
+////                self::openOrCreateScript,
+////                1,
+////                $dataKey,
+////                $emptyDataString
+////            );
+////        }
+////        else {
+//            $dataString = $this->redisClient->get($dataKey);
+//        //}
+//
+//        if ($dataString == null) {
+//            return null;
+//        }
+//
+//        $fullData = $this->serializer->unserialize($dataString);
+//        $profiles = [];
+//        $data = [];
+//
+//        //TODO - this should never be needed?
+//        if (isset($fullData['profiles'])) {
+//            $profiles = $fullData['profiles'];
+//        }
+//
+//        if (isset($fullData['data'])) {
+//            $data = $fullData['data'];
+//        }
+//
+//        return [$data, $profiles];
+//    }
 
 
     /**
      * @param $sessionID
      * @param $saveData
-     * @throws AsmException
+     * @param $existingProfiles
      */
-    function save($sessionID, $saveData)
+    function save($sessionID, $saveData, $existingProfiles)
     {
         $sessionLifeTime = 3600; // 1 hour
+        
+        $data = [];
+        $data['data'] = $saveData;
+        $data['profiles'] = $existingProfiles;
 
         $dataKey = generateSessionDataKey($sessionID);
-        $dataString = $this->serializer->serialize($saveData);
+        $dataString = $this->serializer->serialize($data);
         $this->redisClient->set(
             $dataKey,
             $dataString,
@@ -235,7 +318,12 @@ END;
         );
     }
 
-
+    /**
+     * 
+     */
+    function close()
+    {
+    }
 
 //
 //    /**
@@ -487,8 +575,9 @@ END;
 
     /**
      * @param $sessionID
-     * @param $key
+     * @param $index
      * @param $value
+     * @internal param $key
      * @return int
      */
     function appendToList($sessionID, $index, $value) {
@@ -512,4 +601,7 @@ END;
         $key = generateAsyncKey($sessionID, $index);
         return $this->redisClient->del($key);
     }
+    
+    
+    
 }

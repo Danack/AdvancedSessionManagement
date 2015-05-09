@@ -4,7 +4,7 @@
 
 namespace ASM\Tests;
 
-use ASM\SimpleProfile;
+use ASM\Profile\SimpleProfile;
 
 class SimpleProfileTest extends \PHPUnit_Framework_TestCase {
 

@@ -71,30 +71,33 @@ class FileDriver implements Driver
      * the session could not be found.
      * @param $sessionID
      * @param SessionManager $sessionManager
-     * @return string|null
+     * @param null $userProfile
+     * @return null|string
      */
-    function openSession($sessionID, SessionManager $sessionManager)
+    function openSession($sessionID, SessionManager $sessionManager, $userProfile = null)
     {
         $filename = $this->generateFilenameForData($sessionID);
         if (file_exists($filename) == false) {
             return null;
         }
 
-        return new FileSession($sessionID, $this, $sessionManager);
+        return new FileSession($sessionID, $this, $sessionManager, $userProfile);
     }
 
     /**
      * Create a new session.
      * @param SessionManager $sessionManager
+     * @param null $userProfile
+     * @throws AsmException
      * @return string The newly created session ID.
      */
-    function createSession(SessionManager $sessionManager)
+    function createSession(SessionManager $sessionManager, $userProfile = null)
     {
         list($sessionID, $fileHandle) = $this->createNewSessionFile();
         $dataString = $this->serializer->serialize([]);
         fwrite($fileHandle, $dataString);
 
-        return new FileSession($sessionID, $this, $sessionManager);
+        return new FileSession($sessionID, $this, $sessionManager, $userProfile);
     }
 
     /**
@@ -103,14 +106,14 @@ class FileDriver implements Driver
      */
     private function createNewSessionFile()
     {
-        $count = 10;
+        $count = 0;
         do {
             $sessionID = $this->idGenerator->generateSessionID();
             $filename = $this->generateFilenameForData($sessionID);
             //This only succeeds if the file doesn't already exist
 
-            //TODO remove
-            @mkdir(dirname($filename), true);
+            //TODO remove - the user should create the directory themselves
+            @mkdir(dirname($filename));
             
             $fileHandle = @fopen($filename, 'x+');
 

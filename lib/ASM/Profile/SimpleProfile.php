@@ -1,6 +1,6 @@
 <?php
 
-namespace ASM;
+namespace ASM\Profile;
 
 
 class SimpleProfile

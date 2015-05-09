@@ -15,17 +15,19 @@ interface Driver
      * the session could not be found.
      * @param $sessionID
      * @param SessionManager $sessionManager
+     * @param null $userProfile
      * @return Session|null The newly opened session
      */
 
-    function openSession($sessionID, SessionManager $sessionManager);
+    function openSession($sessionID, SessionManager $sessionManager, $userProfile = null);
 
     /**
      * Create a new session.
      * @param SessionManager $sessionManager
+     * @param null $userProfile
      * @return Session The newly opened session.
      */
-    function createSession(SessionManager $sessionManager);
+    function createSession(SessionManager $sessionManager, $userProfile = null);
 
     /**
      * @param $sessionID

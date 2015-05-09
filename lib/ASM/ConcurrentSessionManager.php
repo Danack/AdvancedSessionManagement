@@ -29,14 +29,13 @@ class ConcurrentSessionManager extends SessionManager
      * Opens and returns the data for an existing session, if and only if the
      * client sent a valid existing session ID. Otherwise returns null.
      *
+     * @param array $cookieData
      * @param null $userProfile
-     * @return null|\ASM\ConcurrentSession
-     * @throws AsmException
-     * @throws FailedToAcquireLockException
+     * @return ConcurrentSession|null
      */
-    public function openSession($userProfile = null)
+    public function openSession(array $cookieData, $userProfile = null)
     {
-        return parent::openSession($userProfile);
+        return parent::openSession($cookieData, $userProfile);
     }
 
     /**
@@ -45,14 +44,13 @@ class ConcurrentSessionManager extends SessionManager
      * Opens and returns the data for an existing session, if and only if the
      * client sent a valid existing session ID. Otherwise creates a new session.
      *
+     * @param array $cookieData
      * @param $userProfile
-     * @return \ASM\ConcurrentSession
-     * @throws AsmException
-     * @throws FailedToAcquireLockException
+     * @return ConcurrentSession
      */
-    function createSession($userProfile = null)
+    function createSession(array $cookieData, $userProfile = null)
     {
-        return parent::createSession($userProfile);
+        return parent::createSession($cookieData, $userProfile);
     }
 }
 

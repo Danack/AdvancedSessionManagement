@@ -25,9 +25,9 @@ class RedisSession implements ConcurrentSession
      * @var array
      */
     protected $data;
-    
-    protected $existsInStorage = false;
 
+    protected $currentProfiles;
+    
     protected $sessionManager = false;
 
 
@@ -37,20 +37,20 @@ class RedisSession implements ConcurrentSession
 //     */
 //    protected $lockNumber;
 
+    protected $userProfile;
 
-    function __construct($sessionID, RedisDriver $redisDriver, SessionManager $sessionManager)
+    function __construct(
+        $sessionID,
+        RedisDriver $redisDriver,
+        SessionManager $sessionManager,
+        array $data,
+        array $currentProfiles)
     {
         $this->sessionID = $sessionID;
         $this->redisDriver = $redisDriver;
         $this->sessionManager = $sessionManager;
-    }
-
-    /**
-     * @return bool
-     */
-    function isPersisted()
-    {
-        return (!($this->sessionID === null));
+        $this->data = $data;
+        $this->currentProfiles = $currentProfiles;
     }
 
     /**
@@ -70,13 +70,6 @@ class RedisSession implements ConcurrentSession
                         $secure = false,
                         $httpOnly = true)
     {
-        if (!$this->sessionID) {
-            throw new AsmException("Cannot generate headers, session has not been saved to storage.");
-        }
-
-//        var_dump($this->sessionManager->getName());
-//        exit(0);
-        
         $time = time();
         
         $headers = [];
@@ -111,26 +104,6 @@ class RedisSession implements ConcurrentSession
         return $this->sessionID;
     }
 
-//    /**
-//     * @param string $data
-//     * @internal param $sessionID
-//     * @internal param string $saveData
-//     */
-//    function saveData($data)
-//    {
-//        $this->redisDriver->save($this->sessionID, $data);
-//    }
-
-    /**
-     *
-     */
-    function loadData()
-    {
-        $this->data = $this->redisDriver->read($this->sessionID);
-
-        return $this->data;
-    }
-
     function &getData()
     {
         if ($this->data == null) {
@@ -144,25 +117,31 @@ class RedisSession implements ConcurrentSession
     {
         $this->data = $data;
     }
-    
-    
+
     function save()
     {
-        $this->redisDriver->save($this->sessionID, $this->data);
+        $this->redisDriver->save(
+            $this->sessionID,
+            $this->data,
+            $this->currentProfiles
+        );
     }
-    
+
     /**
-     *
+     * @param bool $saveData
+     * @return mixed|void
      */
-    function close()
+    function close($saveData = true)
     {
-        //releaseLock
-        //    $this->__destruct();
+        if ($saveData) {
+            $this->save();
+        }
+        
+        $this->redisDriver->close();
     }
 
 
     /**
-     * @param $sessionID
      * @param $index
      * @return int
      */
@@ -173,7 +152,6 @@ class RedisSession implements ConcurrentSession
 
 
     /**
-     * @param $sessionID
      * @param $index
      * @param $value
      * @return int
@@ -185,7 +163,6 @@ class RedisSession implements ConcurrentSession
 
 
     /**
-     * @param $sessionID
      * @param $index
      * @param $increment
      * @return int
@@ -196,7 +173,6 @@ class RedisSession implements ConcurrentSession
     }
 
     /**
-     * @param $sessionID
      * @param $index
      * @return array
      */
@@ -206,7 +182,6 @@ class RedisSession implements ConcurrentSession
     }
 
     /**
-     * @param $sessionID
      * @param $key
      * @param $value
      * @return int
@@ -219,7 +194,6 @@ class RedisSession implements ConcurrentSession
     }
 
     /**
-     * @param $sessionID
      * @param $index
      * @return int
      */

@@ -34,16 +34,27 @@ class FileSession implements Session
 
 
     /**
+     * @var null
+     */
+    protected $userProfile = null;
+
+    /**
      * @param $sessionID
      * @param FileDriver $fileDriver
      * @param SessionManager $sessionManager
+     * @param $userProfile
      */
-    function __construct($sessionID, FileDriver $fileDriver, SessionManager $sessionManager)
+    function __construct(
+        $sessionID,
+        FileDriver $fileDriver,
+        SessionManager $sessionManager,
+        $userProfile)
     {
         $this->sessionID = $sessionID;
         //$this->fileHandle = $fileHandle;
         $this->fileDriver = $fileDriver;
         $this->sessionManager = $sessionManager;
+        $this->userProfile = $userProfile;
     }
 
     function isPersisted()
@@ -121,7 +132,7 @@ class FileSession implements Session
     /**
      *
      */
-    function close()
+    function close($saveData = true)
     {
         //releaseLock
         //    $this->__destruct();

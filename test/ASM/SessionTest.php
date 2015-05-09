@@ -5,12 +5,13 @@ namespace ASM\Tests;
 
 use ASM\SessionManager;
 use ASM\SessionConfig;
-use ASM\SimpleProfile;
+use ASM\Profile\SimpleProfile;
 use ASM\ValidationConfig;
 
 use Predis\Client as RedisClient;
 use ASM\Redis\RedisDriver;
 use ASM\Serializer\JsonSerializer;
+
 
 class SessionTest extends \PHPUnit_Framework_TestCase {
 
@@ -37,13 +38,13 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $redisClient = new RedisClient($this->redisConfig, $this->redisOptions);
         $serializer = new JsonSerializer();
         $redisDriver = new RedisDriver($redisClient, $serializer);
-        $session = new SessionManager(
+        $sessionManager = new SessionManager(
             $this->sessionConfig,
             $redisDriver,
             $validationConfig
         );
 
-        return $session;
+        return $sessionManager;
     }
 
 
@@ -87,7 +88,7 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
     function getFileDriver()
     {
         $path = "./sesstest/subdir".rand(1000000, 10000000);
-        @mkdir($path, true);
+        @mkdir($path, 0755, true);
 
         return $this->injector->make('ASM\Driver\FileDriver', [':path' => $path]);
 
@@ -155,7 +156,7 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $sessionManager2 = $this->createSessionManager();
         $reopenedSession = $sessionManager2->openSession($cookieData);        
         $this->assertInstanceOf('ASM\Session', $reopenedSession);
-        $dataLoaded = $reopenedSession->loadData();
+        $dataLoaded = $reopenedSession->getData();
         $this->assertEquals($srcData, $dataLoaded);
     }
 
@@ -178,8 +179,6 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $sessionManager2 = $this->createSessionManager();
         $reopenedSession = $sessionManager2->createSession($cookieData);
         $this->assertInstanceOf('ASM\Session', $reopenedSession);
-        $dataLoaded = $reopenedSession->loadData();
-        $this->assertEquals($srcData, $dataLoaded);
     }
 
 
@@ -324,6 +323,69 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
 
         $session1 = $sessionLoader->createSession([]);
         $session2 = $sessionLoader->createSession([]);
+    }
+
+
+    // Create a session then reopen it with createSession
+    function testProfileChanged()
+    {
+
+        $originalProfile = new SimpleProfile("TestAgent", '1.2.3.4');
+        $differentProfile = new SimpleProfile("TestAgent", '1.2.3.5');
+
+        $profileChangeCalledCount = 0;
+
+        $profileChange = function(SessionManager $sessionManager, $newProfile, array $previousProfiles) use(&$profileChangeCalledCount, $originalProfile, $differentProfile) {
+
+            $this->assertEquals(
+                $newProfile,
+                $differentProfile->__toString(),
+                "New profile does not match in callback."
+            );
+
+            $this->assertCount(1, $previousProfiles);
+            $this->assertEquals(
+                $originalProfile,
+                $previousProfiles[0],
+                "Original profile does not match"
+            );
+
+            $profileChangeCalledCount++;
+            $previousProfiles[] = $newProfile;
+
+            return $previousProfiles;
+        };
+        
+        $validationConfig = new ValidationConfig(
+            $profileChange
+        );
+
+        $sessionManager = $this->createSessionManager($validationConfig);
+
+        $newSession = $sessionManager->createSession(
+            [],
+            $originalProfile->__toString()
+        );
+        $srcData = ['foo' => 'bar'.rand(1000000, 1000000)];
+        $newSession->setData($srcData);
+        $newSession->save();
+        $sessionID = $newSession->getSessionId();
+        $newSession->close();
+
+        $cookieData = [
+            $this->sessionName => $sessionID
+        ];
+
+        $reopenedSession = $sessionManager->createSession(
+            $cookieData,
+            $differentProfile->__toString()
+        );
+
+        $this->assertEquals(
+            1,
+            $profileChangeCalledCount,
+            "The profile changed callback was not called the correct number of times."
+        );
     }
 }
 

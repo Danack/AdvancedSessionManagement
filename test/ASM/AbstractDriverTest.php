@@ -26,7 +26,7 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase {
         $driver = $this->getDriver();
         //$sessionManager = $this->injector->make('ASM\SessionManager');
         $sessionManager = createSessionManager($driver);
-        $driver->openSession(12345, $sessionManager);
+        $driver->openSession("12346", $sessionManager);
     }
     
 
@@ -47,7 +47,7 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase {
         $reopenedSession = $driver->openSession($sessionID, $sessionManager2);
         $this->assertInstanceOf('ASM\Session', $reopenedSession);
 
-        $readData = $reopenedSession->loadData();
+        $readData = $reopenedSession->getData();
         $this->assertEquals($data, $readData);
 
         //Delete and test no longer openable

@@ -1,5 +1,7 @@
 <?php
 
+use Predis\Client as RedisClient;
+
 $autoloader = require(__DIR__.'/../vendor/autoload.php');
 
 /** @var $autoloader \Composer\Autoload\ClassLoader */
@@ -26,6 +28,14 @@ function getRedisOptions() {
 
     return $redisOptions;
 }
+
+
+
+function createRedisClient()
+{
+    return new RedisClient(getRedisConfig(), getRedisOptions());
+}
+
 
 function maskAndCompareIPAddresses($ipAddress1, $ipAddress2, $maskBits) {
 
@@ -81,9 +91,8 @@ function createProvider($mocks = array(), $shares = array()) {
     $injector = new \Auryn\Injector();
     $injector->alias('Psr\Log\LoggerInterface', 'Monolog\Logger');
 
-
     $injector->delegate('ASM\SessionManager', 'createSessionManager');
-    
+    $injector->delegate('Predis\Client', 'createRedisClient');
 
     foreach ($standardImplementations as $interface => $implementation) {
         if (array_key_exists($interface, $mocks)) {
