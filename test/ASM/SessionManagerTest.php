@@ -68,10 +68,7 @@ class SessionManagerTest extends \PHPUnit_Framework_TestCase {
             "port" => 6379
         );
 
-        $this->redisOptions = array(
-            'profile' => '2.6',
-            'prefix' => 'sessionTest:',
-        );
+        $this->redisOptions = getRedisOptions();
 
         //$session = $this->provider->make(\ASM\Session::class);        
         //$this->provider->share($sessionConfig);

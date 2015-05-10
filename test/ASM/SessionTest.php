@@ -11,6 +11,7 @@ use ASM\ValidationConfig;
 use Predis\Client as RedisClient;
 use ASM\Redis\RedisDriver;
 use ASM\Serializer\JsonSerializer;
+use ASM\FailedToAcquireLockException;
 
 
 class SessionTest extends \PHPUnit_Framework_TestCase {
@@ -19,7 +20,10 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
      * @var \Auryn\injector
      */
     private $injector;
-    
+
+    /**
+     * @var \ASM\SessionConfig
+     */
     private $sessionConfig;
 
     private $redisConfig;
@@ -67,7 +71,10 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
         $this->sessionConfig = new SessionConfig(
             $this->sessionName,
             1000,
-            60
+            60,
+            $lockMode = SessionConfig::LOCK_ON_OPEN,
+            $lockTimeInMilliseconds = 1000 * 5,
+            100
         );
 
         $this->redisConfig = array(
@@ -76,13 +83,7 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
             "port" => 6379
         );
 
-        $this->redisOptions = array(
-            'profile' => '2.6',
-            'prefix' => 'sessionTest:',
-        );
-
-        //$session = $this->provider->make(\ASM\Session::class);        
-        //$this->provider->share($sessionConfig);
+        $this->redisOptions = getRedisOptions();
     }
     
     function getFileDriver()
@@ -310,8 +311,18 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
             $idGenerator
         );
 
+        $sessionConfig = new SessionConfig(
+            $this->sessionName,
+            1000,
+            60,
+            $lockMode = SessionConfig::LOCK_MANUALLY,
+            $lockTimeInMilliseconds = 1000 * 30,
+            100
+        );
+
+        
         $sessionLoader = new SessionManager(
-            $this->sessionConfig,
+            $sessionConfig,
             $redisDriver
         );
         
@@ -329,7 +340,6 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
     // Create a session then reopen it with createSession
     function testProfileChanged()
     {
-
         $originalProfile = new SimpleProfile("TestAgent", '1.2.3.4');
         $differentProfile = new SimpleProfile("TestAgent", '1.2.3.5');
 
@@ -387,6 +397,23 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
             "The profile changed callback was not called the correct number of times."
         );
     }
-}
 
- 
+
+    function testLockException()
+    {
+        $sessionManager = $this->createSessionManager();
+        $session = $sessionManager->createSession([]);
+
+        $cookieData = [
+            $this->sessionName => $session->getSessionId()
+        ];
+
+        try {
+            $reopenedSession = $sessionManager->createSession($cookieData);
+            $this->fail("FailedToAcquireLockException should have been thrown.");
+        }
+        catch(FailedToAcquireLockException $ftale) {
+        }
+        $session->close(false);
+    }
+}

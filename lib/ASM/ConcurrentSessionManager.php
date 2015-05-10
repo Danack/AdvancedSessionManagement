@@ -3,7 +3,6 @@
 
 namespace ASM;
 
-use ASM\ConcurrentDriver;
 
 /**
  * Class ConcurrentSession

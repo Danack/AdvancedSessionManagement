@@ -3,8 +3,14 @@
 namespace ASM\Tests;
 
 
-class RedisDriverTest extends AbstractDriverTest{
+class RedisDriverTest extends AbstractDriverTest {
     function getDriver() {
         return $this->injector->make('\ASM\Redis\RedisDriver');
+    }
+    
+    
+    function  testCreate()
+    {
+        parent::testCreate();
     }
 }

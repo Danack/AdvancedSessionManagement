@@ -55,6 +55,16 @@ class SessionManager
             );
         }
     }
+    
+    function getSessionConfig()
+    {
+        return $this->sessionConfig;
+    }
+    
+    function getLockMode()
+    {
+        return $this->sessionConfig->getLockMode();
+    }
 
     /**
      * @return mixed
@@ -89,6 +99,7 @@ class SessionManager
         }
 
         $sessionID = $cookieData[$this->sessionConfig->getSessionName()];
+
         $session = $this->driver->openSession($sessionID, $this, $userProfile);
 
         if ($session == null) {

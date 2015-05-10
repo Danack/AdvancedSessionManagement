@@ -137,5 +137,14 @@ class FileSession implements Session
         //releaseLock
         //    $this->__destruct();
     }
+
+    /**
+     * @param $milliseconds
+     * @return mixed
+     */
+    function renewLock($milliseconds)
+    {
+        //TODO - implement
+    }
 }
 

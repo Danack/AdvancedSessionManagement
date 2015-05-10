@@ -6,7 +6,6 @@ namespace ASM\Redis;
 
 use ASM\AsmException;
 use ASM\Redis\RedisDriver;
-//use ASM\Session;
 use ASM\ConcurrentSession;
 use ASM\SessionManager;
 use ASM\Data;
@@ -21,38 +20,42 @@ class RedisSession implements ConcurrentSession
      */
     protected $redisDriver;
 
+    protected $sessionManager = false;
+
     /**
      * @var array
      */
     protected $data;
 
     protected $currentProfiles;
-    
-    protected $sessionManager = false;
 
-
-//    /**
-//     * @var string This is random for each lock. It allows us to detect when another
-//     * process has force released the lock, and it is no longer owned by this process.
-//     */
-//    protected $lockNumber;
-
-    protected $userProfile;
+    /**
+     * @var string A token for each lock. It allows us to detect when another
+     * process has force released the lock, and it is no longer owned by this process.
+     */
+    protected $lockToken;
 
     function __construct(
         $sessionID,
         RedisDriver $redisDriver,
         SessionManager $sessionManager,
         array $data,
-        array $currentProfiles)
+        array $currentProfiles,
+        $lockToken = null)
     {
         $this->sessionID = $sessionID;
         $this->redisDriver = $redisDriver;
         $this->sessionManager = $sessionManager;
         $this->data = $data;
         $this->currentProfiles = $currentProfiles;
+        $this->lockToken = $lockToken;
     }
 
+    function __destruct()
+    {
+        $this->releaseLock();
+    }
+    
     /**
      * @param $caching
      * @param null $lastModifiedTime
@@ -71,7 +74,7 @@ class RedisSession implements ConcurrentSession
                         $httpOnly = true)
     {
         $time = time();
-        
+
         $headers = [];
         $headers[] = generateCookieHeader($time,
             $this->sessionManager->getName(),
@@ -89,9 +92,9 @@ class RedisSession implements ConcurrentSession
             $expireTime,
             $lastModifiedTime
         );
-        
+
         $headers = array_merge($headers, $cachingHeaders);
-        
+
         return $headers;
     }
 
@@ -106,10 +109,6 @@ class RedisSession implements ConcurrentSession
 
     function &getData()
     {
-        if ($this->data == null) {
-            $this->loadData();
-        }
-
         return $this->data;
     }
 
@@ -136,10 +135,28 @@ class RedisSession implements ConcurrentSession
         if ($saveData) {
             $this->save();
         }
-        
+
+        $this->releaseLock();
         $this->redisDriver->close();
     }
 
+    function delete()
+    {
+        $this->redisDriver->deleteSession($this->sessionID);
+        $this->releaseLock();
+    }
+
+    /**
+     * 
+     */
+    protected function releaseLock()
+    {
+        if ($this->lockToken) {
+            $lockToken = $this->lockToken;
+            $this->lockToken = null;
+            $this->redisDriver->releaseLock($this->sessionID, $lockToken);
+        }
+    }
 
     /**
      * @param $index
@@ -203,26 +220,15 @@ class RedisSession implements ConcurrentSession
     }
 
 
-//    /**
-//     * @param $sessionID
-//     * @param $milliseconds
-//     * @return mixed
-//     */
-//    function renewLock($sessionID, $milliseconds) {
-//        $lockKey = generateLockKey($sessionID);
-//        //TODO - this is not valid. It needs a script to check that the lockNumber
-//        //is still valid.
-//        $set = $this->redisClient->executeRaw([
-//                'SET',
-//                $lockKey,
-//                $this->lockNumber,
-//                'PX', $milliseconds,
-//                'XX'
-//            ]
-//        );
-//
-//        return $set;
-//    }
+    /**
+     * @param $sessionID
+     * @param $milliseconds
+     * @return mixed
+     */
+    function renewLock($milliseconds)
+    {
+        $this->redisDriver->renewLock($this->sessionID, $this->lockToken, $milliseconds);
+    }
 
 }
 

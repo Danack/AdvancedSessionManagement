@@ -29,11 +29,6 @@ interface Driver
      */
     function createSession(SessionManager $sessionManager, $userProfile = null);
 
-    /**
-     * @param $sessionID
-     * @return mixed
-     */
-//    function forceReleaseLock($sessionID);
 
     /**
      * @return mixed
@@ -46,22 +41,15 @@ interface Driver
      */
     function deleteSession($sessionID);
 
-    /**
-     * @param $sessionID
-     * @param $sessionProfile
-     */
-    //function addProfile($sessionID, $sessionProfile);
+    function releaseLock($sessionID, $lockToken);
+    
+    function acquireLock($sessionID, $lockTimeMS, $acquireTimeoutMS);
 
     /**
      * @param $sessionID
-     * @return string[]
+     * @return mixed
      */
-    //function getStoredProfiles($sessionID);
+    function forceReleaseLock($sessionID);
 
-    /**
-     * @param $sessionID
-     * @param array $sessionProfiles
-     */
-    //function storeSessionProfiles($sessionID, array $sessionProfiles);
 }
 

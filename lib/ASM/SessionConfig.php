@@ -7,6 +7,7 @@ class SessionConfig
 
     const LOCK_ON_OPEN = 'LOCK_ON_OPEN';
     const LOCK_ON_WRITE = 'LOCK_ON_WRITE';
+    const LOCK_MANUALLY = 'LOCK_MANUALLY';
 
     /**
      * @var int How long session data should persist for in seconds
@@ -42,7 +43,8 @@ class SessionConfig
         $lifetime,
         $zombieTime,
         $lockMode = self::LOCK_ON_OPEN,
-        $lockTimeInMilliseconds = 30000
+        $lockTimeInMilliseconds = 30000,
+        $maxLockWaitTimeMilliseconds = 15000
     )
     {
         $this->sessionName = $sessionName;
@@ -54,7 +56,7 @@ class SessionConfig
         $this->lockMilliSeconds = $lockTimeInMilliseconds;
 
         //Time in microseconds
-        $this->maxLockWaitTimeMilliseconds = 5000000;
+        $this->maxLockWaitTimeMilliseconds = $maxLockWaitTimeMilliseconds;
     }
 
     /**

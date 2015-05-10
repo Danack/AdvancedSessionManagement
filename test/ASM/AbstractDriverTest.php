@@ -2,6 +2,10 @@
 
 namespace ASM\Tests;
 
+use ASM\FailedToAcquireLockException;
+
+use ASM\SessionConfig;
+use ASM\SessionManager;
 
 abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase {
 
@@ -24,7 +28,6 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase {
     function testOpenInvalidSession()
     {
         $driver = $this->getDriver();
-        //$sessionManager = $this->injector->make('ASM\SessionManager');
         $sessionManager = createSessionManager($driver);
         $driver->openSession("12346", $sessionManager);
     }
@@ -32,31 +35,118 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase {
 
     function testCreate() {
         $driver = $this->getDriver();
-        $data = ['foo' => 'bar'.rand(100000000, 1000000000)];
+        $data = ['foo' => 'bar'.rand(1000000, 1000000000)];
 
         $sessionManager1 = createSessionManager($driver);
-        $openDriver = $driver->createSession($sessionManager1);
-        $openDriver->setData($data);
-        $openDriver->save();
-        $sessionID = $openDriver->getSessionId();
-        $openDriver->close();
+        $openSession = $driver->createSession($sessionManager1);
+        $openSession->setData($data);
+        $openSession->save();
+        $sessionId = $openSession->getSessionId();
+        $openSession->close();
 
-        //$sessionManager2 = $this->injector->make('ASM\SessionManager');
         $sessionManager2 = createSessionManager($driver);
         
-        $reopenedSession = $driver->openSession($sessionID, $sessionManager2);
+        $reopenedSession = $driver->openSession($sessionId, $sessionManager2);
         $this->assertInstanceOf('ASM\Session', $reopenedSession);
 
         $readData = $reopenedSession->getData();
         $this->assertEquals($data, $readData);
+        $reopenedSession->delete();
 
         //Delete and test no longer openable
-        $driver->deleteSession($sessionID);
-        //$sessionManager3 = $this->injector->make('ASM\SessionManager');
+        //$driver->deleteSession($sessionId);
+
         $sessionManager3 = createSessionManager($driver);
-        $sessionAfterDelete = $driver->openSession($sessionID, $sessionManager3);        
+        $sessionAfterDelete = $driver->openSession($sessionId, $sessionManager3);        
         $this->assertNull($sessionAfterDelete);
     }
+
+
+    function testLockFail() {
+        $driver = $this->getDriver();
+
+        $sessionConfig = new SessionConfig(
+            'testSession',
+            3600,
+            10,
+            \ASM\SessionConfig::LOCK_ON_OPEN,
+            10000,
+            10 
+        );
+
+        $sessionManager = new SessionManager($sessionConfig, $driver);
+        $openSession = $driver->createSession($sessionManager);
+        $sessionId = $openSession->getSessionId();
+
+        try {
+            $reopenedSession = $driver->openSession($sessionId, $sessionManager);
+            $this->fail("Re-opening locked session failed to throw FailedToAcquireLockException");
+        }
+        catch (FailedToAcquireLockException $ftale) {
+        }
+
+        $openSession->close();
+    }
+
+
+
+    function testRenewLock()
+    {
+        $driver = $this->getDriver();
+        $lockTimeinMS = 1000;
+        $sessionConfig = new SessionConfig(
+            'testSession',
+            3600,
+            10,
+            \ASM\SessionConfig::LOCK_ON_OPEN,
+            $lockTimeinMS,
+            1000
+        );
+        $sessionManager = new SessionManager($sessionConfig, $driver);
+        $openSession = $driver->createSession($sessionManager);
+        for ($i=0 ; $i<10 ; $i++) {
+            usleep(($lockTimeinMS / 4) * 1000);
+            $openSession->renewLock($lockTimeinMS);
+        }
+
+        $openSession->close();
+    }
+
+
+    function testRenewLockFails()
+    {
+        $driver = $this->getDriver();
+        $lockTimeinMS = 500;
+        $sessionConfig = new SessionConfig(
+            'testSession',
+            3600,
+            10,
+            \ASM\SessionConfig::LOCK_ON_OPEN,
+            $lockTimeinMS,
+            100
+        );
+        $sessionManager = new SessionManager($sessionConfig, $driver);
+        $openSession = $driver->createSession($sessionManager);
+
+        //Sleep long enough for the lock to expire.
+        usleep($lockTimeinMS * 1000 * 3);
+
+        try {
+            $openSession->renewLock($lockTimeinMS);
+            $this->fail("Renewing a lock that has expired should throw an exception.");
+        }
+        catch(\ASM\AsmException $ae) {
+            //This is expected.
+        }
+
+        try {
+            $openSession->close();
+        }
+        catch(\Exception $e) {
+            //The open session
+        }
+    }
+    
     
     
 //    /**
@@ -140,7 +230,14 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase {
 //    function storeSessionProfiles($sessionProfiles);
 //    
     
-    
+    function testLockLostException()
+    {
+        $sessionId = "123456";   
+        $driver = $this->getDriver();
+        $lockRandomString = $driver->acquireLock($sessionId, 5000, 100);
+        $this->setExpectedException('ASM\LostLockException');
+        $driver->releaseLock($sessionId, $lockRandomString."Different");
+    }
 }
 
 

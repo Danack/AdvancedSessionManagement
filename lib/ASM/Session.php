@@ -64,11 +64,10 @@ interface Session
 //    function acquireLock($sessionID, $lockTimeMS, $acquireTimeoutMS);
 
     /**
-     * @param $sessionID
      * @param $milliseconds
      * @return mixed
      */
-    //function renewLock($sessionID, $milliseconds);
+    function renewLock($milliseconds);
 
     /**
      * @param $sessionID

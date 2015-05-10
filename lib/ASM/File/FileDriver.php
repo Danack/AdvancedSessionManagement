@@ -375,4 +375,24 @@ class FileDriver implements Driver
 //        $contents = implode("\n", $sessionProfiles);
 //        file_put_contents($filename, $contents);
 //    }
+    function releaseLock($sessionID, $lockSecret)
+    {
+        // TODO: Implement releaseLock() method.
+    }
+
+    function acquireLock($sessionID, $lockTimeMS, $acquireTimeoutMS)
+    {
+        // TODO: Implement acquireLock() method.
+    }
+
+    /**
+     * @param $sessionID
+     * @return mixed
+     */
+    function forceReleaseLock($sessionID)
+    {
+        // TODO: Implement forceReleaseLock() method.
+    }
+
+
 }      
