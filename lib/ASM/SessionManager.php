@@ -366,4 +366,36 @@ class SessionManager
     {
         $this->driver->deleteSession($sessionID);
     }
+    
+    function getHeaders($sessionId, $caching,
+            $lastModifiedTime,
+            $domain,
+            $path,
+            $secure,
+            $httpOnly)
+    {
+        $time = time();
+
+        $headers = [];
+        $headers[] = generateCookieHeader($time,
+            $this->getName(),
+            $sessionId,
+            $this->getLifetime(),
+            $path,
+            $domain,
+            $secure,
+            $httpOnly);
+
+        $expireTime = $time + $this->getLifetime();
+
+        $cachingHeaders = getCacheHeaders(
+            $caching,
+            $expireTime,
+            $lastModifiedTime
+        );
+
+        $headers = array_merge($headers, $cachingHeaders);
+
+        return $headers;
+    }
 }

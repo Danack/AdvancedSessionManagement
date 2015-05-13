@@ -3,22 +3,17 @@
 
 namespace ASM\File;
 
-use ASM\File\FileDriver;
+
 use ASM\Session;
 use ASM\SessionManager;
 
 class FileSession implements Session
 {
 
-    protected $sessionID;
-    
-    
-    protected $data = null;
+    protected $sessionId;
 
-//    /**
-//     * @var bool
-//     */
-//    protected $fileHandle = null;
+
+    protected $data = null;
 
     /**
      * @var FileDriver
@@ -26,41 +21,57 @@ class FileSession implements Session
     protected $fileDriver;
 
 
-    /**
-     * @var string This is random for each lock. It allows us to detect when another
-     * process has force released the lock, and it is no longer owned by this process.
-     */
-    protected $lockContents = null;
+//    /**
+//     * @var string This is random for each lock. It allows us to detect when another
+//     * process has force released the lock, and it is no longer owned by this process.
+//     */
+//    protected $lockContents = null;
 
 
     /**
      * @var null
      */
-    protected $userProfile = null;
+    protected $userProfiles = null;
+
+
+//    /**
+//     * @var resource 
+//     */
+//    protected $fileHandle = null;
+//
+//    /**
+//     * @var string Used to detect
+//     */
+//    protected $lockToken;
 
     /**
-     * @param $sessionID
+     * @var FileInfo
+     */
+    protected $fileInfo;
+
+    /**
+     * @param $sessionId
      * @param FileDriver $fileDriver
      * @param SessionManager $sessionManager
-     * @param $userProfile
+     * @param array $userProfiles
+     * @param FileInfo $fileInfo
      */
     function __construct(
-        $sessionID,
+        $sessionId,
+        $data, 
         FileDriver $fileDriver,
         SessionManager $sessionManager,
-        $userProfile)
+        array $userProfiles,
+        FileInfo $fileInfo)
     {
-        $this->sessionID = $sessionID;
-        //$this->fileHandle = $fileHandle;
+        $this->sessionId = $sessionId;
+        $this->data = $data;
         $this->fileDriver = $fileDriver;
         $this->sessionManager = $sessionManager;
-        $this->userProfile = $userProfile;
+        $this->userProfiles = $userProfiles;
+        $this->fileInfo = $fileInfo;
     }
 
-    function isPersisted()
-    {
-        // TODO: Implement isPersisted() method.
-    }
 
     function getHeaders($caching,
                         $lastModifiedTime = null,
@@ -69,7 +80,15 @@ class FileSession implements Session
                         $secure = false,
                         $httpOnly = true)
     {
-        // TODO: Implement getHeaders() method.
+        return $this->sessionManager->getHeaders(
+            $this->sessionId,
+            $caching,
+            $lastModifiedTime,
+            $domain,
+            $path,
+            $secure,
+            $httpOnly
+        );
     }
 
     /**
@@ -77,7 +96,7 @@ class FileSession implements Session
      */
     function getSessionId()
     {
-        return $this->sessionID;
+        return $this->sessionId;
     }
 
     /**
@@ -85,27 +104,18 @@ class FileSession implements Session
      */
     function __destruct()
     {
-//        if ($this->fileHandle != null) {
-//            fclose($this->fileHandle);
-//        }
-//        $this->fileHandle = null;
+        $this->releaseLock();
     }
 
-    /**
-     * @param $data
-     * @internal param $sessionID
-     * @internal param string $saveData
-     */
-    function saveData($data)
-    {
-        //$sessionID =
-        $this->fileDriver->save($this->sessionID, $data);
-
-    }
 
     function save()
     {
-        $this->fileDriver->save($this->sessionID, $this->data);
+        $this->fileDriver->save(
+            $this->sessionId,
+            $this->data,
+            $this->userProfiles,
+            $this->fileInfo
+        );
     }
 
     function setData(array $data)
@@ -124,7 +134,7 @@ class FileSession implements Session
      */
     function loadData()
     {
-        $data = $this->fileDriver->read($this->sessionID);
+        $data = $this->fileDriver->read($this->sessionId);
 
         return $data;
     }
@@ -136,7 +146,24 @@ class FileSession implements Session
     {
         //releaseLock
         //    $this->__destruct();
+        $this->fileDriver->close($this->fileInfo);
     }
+
+    function acquireLock($lockTimeMS, $acquireTimeoutMS)
+    {
+        // TODO: Implement acquireLock() method.
+    }
+
+    function releaseLock()
+    {
+        $this->fileDriver->releaseLock($this->sessionId, $this->fileInfo);
+//        if ($this->fileHandle != null) {
+//            $fileHandle = $this->fileHandle; 
+//            $this->fileHandle = null;
+//            @fclose($fileHandle);
+//        }
+    }
+
 
     /**
      * @param $milliseconds

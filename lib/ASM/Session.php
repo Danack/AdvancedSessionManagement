@@ -6,8 +6,6 @@ namespace ASM;
 
 interface Session
 {
-
-
     function getHeaders($caching,
                         $lastModifiedTime = null,
                         $path = null,
@@ -68,6 +66,10 @@ interface Session
      * @return mixed
      */
     function renewLock($milliseconds);
+
+    //function acquireLock($lockTimeMS, $acquireTimeoutMS);
+
+    function releaseLock();
 
     /**
      * @param $sessionID

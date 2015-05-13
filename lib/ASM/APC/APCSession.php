@@ -5,20 +5,19 @@ namespace ASM\Redis;
 
 
 use ASM\AsmException;
-use ASM\Redis\RedisDriver;
-use ASM\ConcurrentSession;
+use ASM\Session;
 use ASM\SessionManager;
 use ASM\Data;
 
-class RedisSession implements ConcurrentSession
+class APCSession implements Session
 {
 
     protected $sessionId = null;
 
     /**
-     * @var RedisDriver
+     * @var APCDriver
      */
-    protected $redisDriver;
+    protected $apcDriver;
 
     protected $sessionManager = false;
 
@@ -37,14 +36,14 @@ class RedisSession implements ConcurrentSession
 
     function __construct(
         $sessionID,
-        RedisDriver $redisDriver,
+        APCDriver $redisDriver,
         SessionManager $sessionManager,
         array $data,
         array $currentProfiles,
         $lockToken = null)
     {
         $this->sessionId = $sessionID;
-        $this->redisDriver = $redisDriver;
+        $this->apcDriver = $redisDriver;
         $this->sessionManager = $sessionManager;
         $this->data = $data;
         $this->currentProfiles = $currentProfiles;
@@ -105,7 +104,7 @@ class RedisSession implements ConcurrentSession
 
     function save()
     {
-        $this->redisDriver->save(
+        $this->apcDriver->save(
             $this->sessionId,
             $this->data,
             $this->currentProfiles
@@ -123,12 +122,12 @@ class RedisSession implements ConcurrentSession
         }
 
         $this->releaseLock();
-        $this->redisDriver->close();
+        $this->apcDriver->close();
     }
 
     function delete()
     {
-        $this->redisDriver->deleteSession($this->sessionId);
+        $this->apcDriver->deleteSession($this->sessionId);
         $this->releaseLock();
     }
 
@@ -140,69 +139,8 @@ class RedisSession implements ConcurrentSession
         if ($this->lockToken) {
             $lockToken = $this->lockToken;
             $this->lockToken = null;
-            $this->redisDriver->releaseLock($this->sessionId, $lockToken);
+            $this->apcDriver->releaseLock($this->sessionId, $lockToken);
         }
-    }
-
-    /**
-     * @param $index
-     * @return int
-     */
-    function get($index)
-    {
-        return $this->redisDriver->get($this->sessionId, $index);
-    }
-
-
-    /**
-     * @param $index
-     * @param $value
-     * @return int
-     */
-    function set($index, $value)
-    {
-        return $this->redisDriver->set($this->sessionId, $index, $value);
-    }
-
-
-    /**
-     * @param $index
-     * @param $increment
-     * @return int
-     */
-    function increment($index, $increment)
-    {
-        return $this->redisDriver->increment($this->sessionId, $index, $increment);
-    }
-
-    /**
-     * @param $index
-     * @return array
-     */
-    function getList($index)
-    {
-        return $this->redisDriver->getList($this->sessionId, $index);
-    }
-
-    /**
-     * @param $key
-     * @param $value
-     * @return int
-     */
-    function appendToList($key, $value)
-    {
-        $result = $this->redisDriver->appendToList($this->sessionId, $key, $value);
-
-        return $result;
-    }
-
-    /**
-     * @param $index
-     * @return int
-     */
-    function clearList($index)
-    {
-        return $this->redisDriver->clearList($this->sessionId, $index);
     }
 
 
@@ -213,9 +151,8 @@ class RedisSession implements ConcurrentSession
      */
     function renewLock($milliseconds)
     {
-        $this->redisDriver->renewLock($this->sessionId, $this->lockToken, $milliseconds);
+        $this->apcDriver->renewLock($this->sessionId, $this->lockToken, $milliseconds);
     }
-
 }
 
 

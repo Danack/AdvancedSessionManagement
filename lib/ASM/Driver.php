@@ -41,15 +41,14 @@ interface Driver
      */
     function deleteSession($sessionID);
 
-    function releaseLock($sessionID, $lockToken);
+    //function releaseLock($sessionID, $lockToken);
     
-    function acquireLock($sessionID, $lockTimeMS, $acquireTimeoutMS);
+    //function acquireLock($sessionID, $lockTimeMS, $acquireTimeoutMS);
 
     /**
      * @param $sessionID
      * @return mixed
      */
     function forceReleaseLock($sessionID);
-
 }
 

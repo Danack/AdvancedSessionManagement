@@ -8,9 +8,8 @@ $autoloader = require(__DIR__.'/../vendor/autoload.php');
 $autoloader->add('ASM', __DIR__);
 
 
-$foo = new ASM\Mock\XKCDIDGenerator();
-
-function getRedisConfig() {
+function getRedisConfig()
+{
     $redisConfig = array(
         "scheme" => "tcp",
         "host" => 'localhost',
@@ -20,7 +19,8 @@ function getRedisConfig() {
     return $redisConfig;
 }
 
-function getRedisOptions() {
+function getRedisOptions()
+{
     $redisOptions = array(
         'profile' => '2.6',
         'prefix' => 'sessionTest'.date("Ymdhis").uniqid().':',
@@ -37,8 +37,8 @@ function createRedisClient()
 }
 
 
-function maskAndCompareIPAddresses($ipAddress1, $ipAddress2, $maskBits) {
-
+function maskAndCompareIPAddresses($ipAddress1, $ipAddress2, $maskBits)
+{
     $ipAddress1 = ip2long($ipAddress1);
     $ipAddress2 = ip2long($ipAddress2);
 
@@ -51,7 +51,8 @@ function maskAndCompareIPAddresses($ipAddress1, $ipAddress2, $maskBits) {
     return false;
 }
 
-function extractCookie($header) {
+function extractCookie($header)
+{
     if (stripos($header, 'Set-Cookie') === 0) {
         $matches = array();
         $regex = "/Set-Cookie: (\w*)=(\w*);.*/";
@@ -82,8 +83,8 @@ function createSessionManager(ASM\Driver $driver)
  * @param array $shares
  * @return \Auryn\Injector
  */
-function createProvider($mocks = array(), $shares = array()) {
-
+function createProvider($mocks = array(), $shares = array())
+{
     $standardImplementations = [
         //'Intahwebz\Session' => Intahwebz\Session\MockSession::class,
     ];

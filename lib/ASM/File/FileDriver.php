@@ -3,19 +3,16 @@
 namespace ASM\File;
 
 use ASM\Driver;
-use ASM\File\FileSession;
+use ASM\FailedToAcquireLockException;
 use ASM\Serializer;
-use ASM\IDGenerator;
+use ASM\IdGenerator;
 use ASM\AsmException;
 use ASM\SessionManager;
+use ASM\SessionConfig;
 
 
 class FileDriver implements Driver
 {
-
-    const LOCK_FILE = 'lock_file';
-
-    const PROFILES_FILE = 'profile_file';
 
     const DATA_FILE = 'data_file';
 
@@ -43,7 +40,7 @@ class FileDriver implements Driver
      * @param IDGenerator $idGenerator
      * @throws AsmException
      */
-    function __construct($path, Serializer $serializer = null, IDGenerator $idGenerator = null)
+    function __construct($path, Serializer $serializer = null, IdGenerator $idGenerator = null)
     {
         if (strlen($path) == 0) {
             throw new AsmException("Empty filepath not acceptable for storing sessions.");
@@ -69,19 +66,37 @@ class FileDriver implements Driver
     /**
      * Open an existing session. Returns either the session data or null if
      * the session could not be found.
-     * @param $sessionID
+     * @param $sessionId
      * @param SessionManager $sessionManager
      * @param null $userProfile
      * @return null|string
      */
-    function openSession($sessionID, SessionManager $sessionManager, $userProfile = null)
+    function openSession($sessionId, SessionManager $sessionManager, $userProfile = null)
     {
-        $filename = $this->generateFilenameForData($sessionID);
-        if (file_exists($filename) == false) {
+        $filename = $this->generateFilenameForData($sessionId);
+        $fileHandle = @fopen($filename, 'r+');
+
+        if ($fileHandle == false) {
             return null;
         }
 
-        return new FileSession($sessionID, $this, $sessionManager, $userProfile);
+        $lockToken = null;
+        $isLocked = false;
+        
+        if ($sessionManager->getLockMode() == SessionConfig::LOCK_ON_OPEN) {
+            $isLocked = true;
+            $lockToken = $this->acquireLock(
+                $fileHandle,
+                $sessionManager->getSessionConfig()->getLockMilliSeconds(),
+                $sessionManager->getSessionConfig()->getMaxLockWaitTimeMilliseconds()
+            );
+        }
+
+        $data = $this->read($fileHandle);
+        
+        $fileInfo = new FileInfo($fileHandle, $lockToken, $isLocked);
+
+        return new FileSession($sessionId, $data, $this, $sessionManager, $userProfile, $fileInfo);
     }
 
     /**
@@ -93,42 +108,74 @@ class FileDriver implements Driver
      */
     function createSession(SessionManager $sessionManager, $userProfile = null)
     {
-        list($sessionID, $fileHandle) = $this->createNewSessionFile();
-        $dataString = $this->serializer->serialize([]);
-        fwrite($fileHandle, $dataString);
+        list($sessionId, $fileHandle) = $this->createNewSessionFile();
 
-        return new FileSession($sessionID, $this, $sessionManager, $userProfile);
+        $isLocked = false;
+        if ($sessionManager->getLockMode() == SessionConfig::LOCK_ON_OPEN) {
+            $isLocked = true;
+            $this->acquireLock(
+                $fileHandle, 
+                $sessionManager->getSessionConfig()->getLockMilliSeconds(),
+                $sessionManager->getSessionConfig()->getMaxLockWaitTimeMilliseconds()
+            );
+        }
+
+        $existingProfiles = [];
+        if ($userProfile !== null) {
+            $existingProfiles[] = $userProfile;
+        }
+
+        $fileInfo = new FileInfo($fileHandle, $isLocked);
+        $this->save($sessionId, [], $existingProfiles,  $fileInfo);
+        fclose($fileHandle);
+
+        return new FileSession($sessionId, [], $this, $sessionManager, $existingProfiles, $fileInfo);
     }
 
+//    private function openFile($sessionId, SessionManager $sessionManager, $mode)
+//    {
+//        //$fileHandleAndLockToken = null;
+////        if ($sessionManager->getLockMode() == SessionConfig::LOCK_ON_OPEN) {
+////            return $this->acquireLock(
+////                $sessionId,
+////                $sessionManager->getSessionConfig()->getLockMilliSeconds(),
+////                $sessionManager->getSessionConfig()->getMaxLockWaitTimeMilliseconds()
+////            );
+////        }
+//
+//        $filename = $this->generateFilenameForData($sessionId);
+//        // Open the file for reading + writing . If the file does not exist,
+//        // it is created. If it exists, it is neither truncated (as opposed
+//        // to 'w'), nor the call to this function fails (as is the case with 'x').
+//        return @fopen($filename, $mode);
+//        
+////        if ($fileHandle) {
+////            return new FileInfo($fileHandle, null, false);
+////        }
+//
+////        return null;
+//    }
+    
+    
     /**
      * @return array
      * @throws AsmException
      */
     private function createNewSessionFile()
     {
-        $count = 0;
-        do {
-            $sessionID = $this->idGenerator->generateSessionID();
-            $filename = $this->generateFilenameForData($sessionID);
-            //This only succeeds if the file doesn't already exist
-
-            //TODO remove - the user should create the directory themselves
+        for ($count=0 ; $count<10 ; $count++) {
+            $sessionId = $this->idGenerator->generateSessionID();
+            $filename = $this->generateFilenameForData($sessionId);
+            //TODO remove? - the user should create the directory themselves
             @mkdir(dirname($filename));
-            
+            //This only succeeds if the file doesn't already exist
             $fileHandle = @fopen($filename, 'x+');
-
             if ($fileHandle != false) {
-                break;
+                return [$sessionId, $fileHandle];
             }
+        };
 
-            $count++;
-            if ($count > 10) {
-                //TODO - improve conditions of when an exception is thrown
-                throw new AsmException("Failed to open a new session file with name $filename");
-            }
-        } while (1);
-
-        return [$sessionID, $fileHandle];
+        throw new AsmException("Failed to open a new session file with random name.");
     }
 
     /**
@@ -141,18 +188,53 @@ class FileDriver implements Driver
         return $this->path.'/'.$sessionID.".data";
     }
 
-
-
     /**
-     * @param $sessionID
-     * @param $saveData
+     * @param $sessionId
+     * @param $data
+     * @param $existingProfiles
+     * @param FileInfo $fileInfo
+     * @return resource
      * @throws AsmException
+     * @throws FailedToAcquireLockException
      */
-    function save($sessionID, $saveData)
+    function save($sessionId, $data, $existingProfiles, FileInfo $fileInfo)
     {
-        $filename = $this->generateFilenameForData($sessionID);
-        $dataString = $this->serializer->serialize($saveData);
-        file_put_contents($filename, $dataString);
+        $rawData = [];
+        $rawData['data'] = $data;
+        $rawData['profiles'] = $existingProfiles;
+        //$rawData['lockToken'] = $fileInfo->lockToken;
+
+        $dataString = $this->serializer->serialize($rawData);
+        $filename = $this->generateFilenameForData($sessionId);
+
+        $tempFilename = tempnam(dirname($filename), basename($filename));
+        $writeResult = @file_put_contents($filename, $dataString);
+        if ($writeResult === false) {
+            throw new AsmException("Failed to write session data.");
+        }
+
+        $newFileHandle = fopen($tempFilename, 'r+');
+        $dataWritten = fwrite($newFileHandle, $dataString);
+        
+        if ($dataWritten === false) {
+            throw new AsmException("Failed to save session data writing of data.");
+        }
+
+        if ($fileInfo->isLocked) {
+            $this->acquireLock(
+                $newFileHandle,
+                5000,
+                1000
+            );
+        }
+        
+        $renamed = rename($tempFilename, $filename);
+        
+        if (!$renamed) {
+            throw new AsmException("Failed to save session data during rename of file");
+        }
+
+        $fileInfo->fileHandle = $newFileHandle; 
     }
 
 
@@ -161,125 +243,58 @@ class FileDriver implements Driver
      * @return mixed
      * @throws AsmException
      */
-    function read($sessionID)
+    function read($fileHandle)
     {
-        $filename = $this->generateFilenameForData($sessionID);
-        $dataString = file_get_contents($filename);
-        $data = $this->serializer->unserialize($dataString);
+        $dataString = stream_get_contents($fileHandle);
+        //TODO - should we catch unserialization errors?
+        $rawData = $this->serializer->unserialize($dataString);
 
-        return $data;
+        $data = null;
+        $existingProfiles = null;
+        $lockToken = null;
+        
+        if (array_key_exists('data', $rawData)) {
+            $data = $rawData['data'];
+        }
+        if (array_key_exists('profiles', $rawData)) {
+            $existingProfiles = $rawData['profiles'];
+        }
+//        if (array_key_exists('lockToken', $rawData)) {
+//            $lockToken = $rawData['lockToken'];
+//        }
+
+        return [$data, $existingProfiles];
     }
 
-
-//    
-//    /**
-//     * Acquire a lock for the session
-//     * @param $sessionID
-//     * @param $milliseconds
-//     */
-//    function acquireLock($sessionID, $lockTimeMS, $acquireTimeoutMS) {
-//        $filename = $this->generateFilename($sessionID, self::LOCK_FILE);
-//        // Open the file for reading + writing . If the file does not exist,
-//        // it is created. If it exists, it is neither truncated (as opposed
-//        // to 'w'), nor the call to this function fails (as is the case with 'x').
-//        $fileHandle = @fopen($filename, 'c+'); 
-//
-//        if ($fileHandle === false) {
-//            throw new AsmException("Failed top open '$filename' to acquire lock.");
-//        }
-//        
-//        $lockRandomNumber = "".rand(100000000, 100000000000);
-//        // Get the time in MS
-//        $giveUpTime = ((int)(microtime(true) * 1000)) + $acquireTimeoutMS;
-//        $finished = false;
-//
-//        do {
-//            $wouldBlock = false;
-//            $locked = flock($fileHandle, LOCK_EX|LOCK_NB, $wouldBlock);
-//
-//            if ($locked) {
-//                ftruncate($fileHandle, 0);
-//                fwrite($fileHandle, $lockRandomNumber);
-//                break;
-//            }
-//
-//            usleep(1000); // sleep 1ms to avoid churning CPU
-//
-//            if ($giveUpTime < ((int)(microtime(true) * 1000))) {
-//                fclose($fileHandle);
-//                throw new FailedToAcquireLockException(
-//                    "FileDriver failed to acquire lock for session $sessionID"
-//                );
-//            }
-//        } while($finished === false);
-//
-//        $this->fileHandle = $fileHandle;
-//        $this->lockContents = $lockRandomNumber;
-//    }
-//
-//    /**
-//     * @param $sessionID
-//     * @param $milliseconds
-//     * @return mixed
-//     */
-//    function renewLock($sessionID, $milliseconds) {
-//        if (!$this->validateLock($sessionID)) {
-//            throw new LockAlreadyReleasedException("Cannot renew lock, it has already been released.");
-//        }
-//        
-//        $filename = $this->generateFilename($sessionID, self::LOCK_FILE);
-//        $time = time() + ((int)(($milliseconds + 999) / 1000));
-//        touch($filename,  $time);
-//    }
-//
-//    /**
-//     * @param $sessionID
-//     * @return mixed
-//     */
-//    function releaseLock($sessionID) {
-//        $result = true;
-//        
-//        if ($this->validateLock($sessionID) == false) {
-//            $result = false;
-//            fseek($this->fileHandle, 0);
-//            ftruncate($this->fileHandle, 0);
-//        }
-//
-//        flock($this->fileHandle, LOCK_UN);
-//        fclose($this->fileHandle);
-//        $this->fileHandle = null;
-//
-//        return $result;
-//    }
-//
-//    /**
-//     * Test whether the driver thinks the data is locked. The result may
-//     * not be accurate when another process has force released the lock.
-//     * @param $sessionID
-//     * @return boolean
-//     */
+    /**
+     * Test whether the driver thinks the data is locked. The result may
+     * not be accurate when another process has force released the lock.
+     * @param $sessionID
+     * @return boolean
+     */
 //    function isLocked($sessionID) {
 //        return (bool)($this->fileHandle);
 //    }
-//
-//    /**
-//     * @param $sessionID
-//     * @return boolean
-//     */
-//    function validateLock($sessionID) {
-//        $filename = $this->generateFilename($sessionID, self::LOCK_FILE);
-//        $contents = @file_get_contents($filename);
-//        return (bool)($this->lockContents === $contents);
-//    }
-//
-//    /**
-//     * @param $sessionID
-//     * @return mixed
-//     */
-//    function forceReleaseLock($sessionID) {
-//        $filename = $this->generateFilename($sessionID, self::LOCK_FILE);
-//        unlink($filename);
-//    }
+
+    /**
+     * @param $sessionID
+     * @return boolean
+     */
+    function validateLock($sessionID)
+    {
+        $filename = $this->generateFilenameForLock($sessionID, self::LOCK_FILE);
+        $contents = @file_get_contents($filename);
+        return (bool)($this->lockContents === $contents);
+    }
+
+    /**
+     * @param $sessionID
+     * @return mixed
+     */
+    function forceReleaseLock($sessionID) {
+        $filename = $this->generateFilenameForLock($sessionID);
+        unlink($filename);
+    }
 //
 //    /**
 //     * @param $sessionID
@@ -327,7 +342,7 @@ class FileDriver implements Driver
 //    function destroyExpiredSessions() {
 //        // TODO: Implement destroyExpiredSessions() method.
 //    }
-//
+
     /**
      * Delete a single session that matches the $sessionID
      * @param $sessionID
@@ -337,62 +352,87 @@ class FileDriver implements Driver
         $filename = $this->generateFilenameForData($sessionID);
         unlink($filename);
     }
-//
-//    /**
-//     * @param $sessionID
-//     * @param $sessionProfile
-//     */
-//    function addProfile($sessionID, $sessionProfile) {
-//        $filename = $this->generateFilename($sessionID, self::PROFILES_FILE);
-//        $fileHandle = @fopen($filename, 'a');
-//        if ($fileHandle === false) {
-//            throw new AsmException("Failed to open profile file '$filename' to append.");
-//        }
-//        fwrite($fileHandle, $sessionProfile."\n");
-//        @fclose($fileHandle);
-//    }
-//
-//    /**
-//     * @param $sessionID
-//     * @return mixed
-//     */
-//    function getStoredProfile($sessionID) {
-//        $filename = $this->generateFilename($sessionID, self::PROFILES_FILE);
-//        $filelines = @file($filename, FILE_IGNORE_NEW_LINES);
-//        if ($filelines === false) {
-//            return [];
-//        }
-//
-//        return $filelines;
-//    }
-//
-//    /**
-//     * @param $sessionID
-//     * @param array $sessionProfiles
-//     */
-//    function storeSessionProfiles($sessionID, array $sessionProfiles) {
-//        $filename = $this->generateFilename($sessionID, self::PROFILES_FILE);
-//        $contents = implode("\n", $sessionProfiles);
-//        file_put_contents($filename, $contents);
-//    }
-    function releaseLock($sessionID, $lockSecret)
-    {
-        // TODO: Implement releaseLock() method.
-    }
 
-    function acquireLock($sessionID, $lockTimeMS, $acquireTimeoutMS)
+
+    /**
+     * Acquire a lock for the session
+     * @param $sessionId
+     * @param $milliseconds
+     */
+    function acquireLock($fileHandle, $lockTimeMS, $acquireTimeoutMS)
     {
-        // TODO: Implement acquireLock() method.
+//        $filename = $this->generateFilenameForLock($sessionId);
+//        // Open the file for reading + writing . If the file does not exist,
+//        // it is created. If it exists, it is neither truncated (as opposed
+//        // to 'w'), nor the call to this function fails (as is the case with 'x').
+//        $fileHandle = @fopen($filename, 'c+');
+//
+//        if ($fileHandle === false) {
+//            throw new AsmException("Failed top open '$filename' to acquire lock.");
+//        }
+
+        //$lockToken = $this->idGenerator->generateSessionID();
+        // Get the time in MS
+        $currentTimeInMS = (int)(microtime(true) * 1000);
+        
+        $giveUpTime = $currentTimeInMS + $acquireTimeoutMS;
+        //$lockExpireTime = $currentTimeInMS + $lockTimeMS;
+
+        do {
+            //$wouldBlock = false;
+            $locked = flock($fileHandle, LOCK_EX|LOCK_NB);//, $wouldBlock);
+            if ($locked) {
+//                ftruncate($fileHandle, 0);
+//                $dataString = json_encode([
+//                    'expireTime' => $lockExpireTime,
+//                    'token' => $lockToken,
+//                ]);
+//
+//                fwrite($fileHandle, $dataString);
+
+//                touch ( string $filename [, int $time = time() [, int $atime ]] )
+                
+                
+                return true;
+            }
+            usleep(1000); // sleep 1ms to avoid churning CPU
+        } while($giveUpTime > ((int)(microtime(true) * 1000)));
+
+        //fclose($fileHandle);
+
+        throw new FailedToAcquireLockException(
+            "FileDriver failed to acquire lock."
+        );
     }
 
     /**
      * @param $sessionID
+     * @param $milliseconds
      * @return mixed
      */
-    function forceReleaseLock($sessionID)
-    {
-        // TODO: Implement forceReleaseLock() method.
+    function renewLock($sessionID, $milliseconds) {
+        if (!$this->validateLock($sessionID)) {
+            throw new LockAlreadyReleasedException("Cannot renew lock, it has already been released.");
+        }
+
+        $filename = $this->generateFilenameForLock($sessionID);
+        $time = time() + ((int)(($milliseconds + 999) / 1000));
+        touch($filename,  $time);
     }
 
+    /**
+     * @param $sessionId
+     * @return mixed
+     */
+    function releaseLock($sessionId, FileInfo $fileInfo) {
+        @flock($fileInfo->fileHandle, LOCK_UN);
+        $fileInfo->isLocked = false;
+    }
 
-}      
+    function close(FileInfo $fileInfo) 
+    {
+        @fclose($fileInfo->fileHandle);
+        $fileInfo->fileHandle = null;
+        $fileInfo->isLocked = false;   
+    }
+}

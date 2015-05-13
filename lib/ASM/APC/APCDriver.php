@@ -3,7 +3,7 @@
 namespace ASM\Redis;
 
 use ASM\AsmException;
-use ASM\ConcurrentDriver;
+use ASM\Driver;
 use ASM\IdGenerator;
 use ASM\Serializer;
 use ASM\SessionManager;
@@ -12,7 +12,6 @@ use ASM\FailedToAcquireLockException;
 use ASM\SessionManagerInterface;
 use ASM\SessionConfig;
 
-use Predis\Client as RedisClient;
 
 /**
  *
@@ -29,50 +28,12 @@ use Predis\Client as RedisClient;
  *
  */
 
-/**
- * @param $sessionID
- * @return string
- *
- */
-function generateSessionDataKey($sessionID)
+
+
+
+
+class APCDriver implements Driver
 {
-    return 'session:'.$sessionID;
-}
-
-function generateZombieKey($dyingSessionID)
-{
-    return 'zombie:'.$dyingSessionID;
-}
-
-function generateLockKey($sessionID)
-{
-    return 'session:'.$sessionID.':lock';
-}
-
-function generateProfileKey($sessionID)
-{
-    return 'session:'.$sessionID.':profile';
-}
-
-/**
- * @param $sessionID
- * @return string
- */
-function generateAsyncKey($sessionID)
-{
-    $key = 'session:'.$sessionID.':async';
-
-    return $key;
-}
-
-
-
-class RedisDriver implements ConcurrentDriver
-{
-    /**
-     * @var \Predis\Client
-     */
-    private $redisClient;
 
     /**
      * @var string The lock key, this is consistent per sessionID.
@@ -84,64 +45,19 @@ class RedisDriver implements ConcurrentDriver
      */
     private $serializer;
 
-
     /**
      * @var IdGenerator
      */
     private $idGenerator;
 
-    /**
-     * Redis lua script for releasing a lock. Returns int(1) when the lock was
-     * released correctly, otherwise returns 0
-     *
-     * Todo - upgrade to a fault tolerant distributed version of this.
-     * https://github.com/ronnylt/redlock-php/blob/master/src/RedLock.php
-     * http://redis.io/topics/distlock
-     *
-     */
-    const unlockScript = <<< END
-if redis.call("get",KEYS[1]) == ARGV[1]
-then
-    return redis.call("del",KEYS[1])
-else
-    return 0
-end
-END;
+    private $prefix;
 
-    /**
-     * KEYS[1] == lock key
-     * ARGV[1] == lock token
-     * ARGV[2] == lock time in milliseconds.
-     */
-    const renewLockScript = <<< END
-if redis.call("get",KEYS[1]) == ARGV[1]
-then
-    return redis.call("PSETEX",KEYS[1],ARGV[2],ARGV[1])
-else
-    return redis.error_reply("Lock lost")
-end
-
-END;
-
-
-    /* # if the value of key is the same as arg
-     * if redis.call("get",KEYS[1]) == ARGV[1]
-     * then
-     *     # return the result of deleting the key which is
-     *     # Integer reply: The number of keys that were removed.
-     *     return redis.call("del",KEYS[1])
-     * else
-     *     #return 0 
-     *     return 0
-     * 
-     *
-     */
+ 
     function __construct(
-        RedisClient $redisClient,
         Serializer $serializer = null,
-        IdGenerator $idGenerator = null)
+        IdGenerator $idGenerator = null,
+        $prefix = '')
     {
-        $this->redisClient = $redisClient;
 
         if ($serializer) {
             $this->serializer = $serializer;
@@ -156,6 +72,8 @@ END;
         else {
             $this->idGenerator = new \ASM\IdGenerator\RandomLibIdGenerator();
         }
+
+        $this->prefix = $prefix;
     }
 
 
@@ -171,15 +89,11 @@ END;
     function openSession($sessionId, SessionManager $sessionManager, $userProfile = null)
     {
         $sessionId = (string)$sessionId;
-
         $lockToken = $this->acquireLockIfRequired($sessionId, $sessionManager);
+        $dataKey = $this->generateSessionDataKey($sessionId);
+        $dataString = apc_fetch($dataKey, $success);
 
-        $dataKey = generateSessionDataKey($sessionId);
-        $dataString = $this->redisClient->get($dataKey);
-        if ($dataString == null) {
-            if ($lockToken !== null) {
-                $this->releaseLock($sessionId, $lockToken);
-            }
+        if ($success == false) {
             return null;
         }
 
@@ -187,14 +101,12 @@ END;
         $currentProfiles = [];
         $data = [];
 
-        //TODO - this should never be needed?
-        if (isset($fullData['profiles'])) {
+        if (array_key_exists('profiles', $fullData)) {
             $currentProfiles = $fullData['profiles'];
         }
 
-        if (isset($fullData['data'])) {
+        if (array_key_exists('data', $fullData)) {
             $data = $fullData['data'];
-            //Data was not found?
         }
 
         $currentProfiles = $sessionManager->performProfileSecurityCheck(
@@ -202,7 +114,7 @@ END;
             $currentProfiles
         );
 
-        return new RedisSession(
+        return new APCSession(
             $sessionId,
             $this,
             $sessionManager,
@@ -251,16 +163,14 @@ END;
             $sessionId = $this->idGenerator->generateSessionID();
             $lockToken = $this->acquireLockIfRequired($sessionId, $sessionManager);
             $dataKey = generateSessionDataKey($sessionId);
-            $set = $this->redisClient->set(
+            $set = apc_store(
                 $dataKey,
                 $dataString,
-                'EX',
-                $sessionLifeTime,
-                'NX'
+                $sessionLifeTime
             );
 
             if ($set) {
-                return new RedisSession(
+                return new APCSession(
                     $sessionId,
                     $this,
                     $sessionManager,
@@ -287,31 +197,30 @@ END;
      */
     function deleteSession($sessionID)
     {
-        $dataKey = generateSessionDataKey($sessionID);
-        $this->redisClient->del($dataKey);
+        $dataKey = $this->generateSessionDataKey($sessionID);
+        apc_delete($dataKey);
     }
 
     /**
-     * @param $sessionID
+     * @param $sessionId
      * @param $saveData
      * @param $existingProfiles
      */
-    function save($sessionID, $saveData, $existingProfiles)
+    function save($sessionId, $saveData, $existingProfiles, SessionManager $sessionManager)
     {
-        $sessionLifeTime = 3600; // 1 hour
-
         $data = [];
         $data['data'] = $saveData;
         $data['profiles'] = $existingProfiles;
 
-        $dataKey = generateSessionDataKey($sessionID);
+        $dataKey = $this->generateSessionDataKey($sessionId);
         $dataString = $this->serializer->serialize($data);
-        $this->redisClient->set(
-            $dataKey,
-            $dataString,
-            'EX',
-            $sessionLifeTime
-        );
+        $lifetime = $sessionManager->getSessionConfig()->getLifetime();
+
+        $stored = apc_store($dataKey, $dataString, $lifetime);
+        
+        if (!$stored) {
+            throw new AsmException("Failed to save data.");
+        }
     }
 
     /**
@@ -330,11 +239,7 @@ END;
 //    }
 //
 
-//
-//    function isLocked($sessionID) {
-//        return (bool)($this->lockNumber);
-//    }
-//
+
 //    /**
 //     * @param $sessionID
 //     * @return bool
@@ -356,40 +261,32 @@ END;
 
 
     /**
-     * @param $sessionID
+     * @param $sessionId
      * @param $lockTimeMS
      * @param $acquireTimeoutMS
      * @return string
      * @throws FailedToAcquireLockException
      */
-    function acquireLock($sessionID, $lockTimeMS, $acquireTimeoutMS)
+    function acquireLock($sessionId, $lockTimeMS, $acquireTimeoutMS)
     {
-        $lockKey = generateLockKey($sessionID);
+        $lockKey = $this->generateLockKey($sessionId);
         $lockToken = $this->idGenerator->generateSessionID();
-        $finished = false;
-
         $giveUpTime = ((int)(microtime(true) * 1000)) + $acquireTimeoutMS;
 
+        $lockTimeSeconds = intval(ceil($lockTimeMS / 1000));
+        
         do {
-            $set = $this->redisClient->set(
-                $lockKey,
-                $lockToken,
-                'PX',
-                $lockTimeMS,
-                'NX'
-            );
-            /** @var $set \Predis\Response\Status */
-
-            if ($set == "OK") {
-                $finished = true;
-            } else if ($giveUpTime < ((int)(microtime(true) * 1000))) {
-                throw new FailedToAcquireLockException(
-                    "Failed to acquire lock for session $sessionID"
-                );
+            $added = apc_add($lockKey, $lockToken, $lockTimeSeconds);
+            if ($added === true) {
+                return $lockToken;
             }
-        } while ($finished === false);
+        } while ($giveUpTime > ((int)(microtime(true) * 1000)));
 
-        return $lockToken;
+        throw new FailedToAcquireLockException(
+            "Failed to acquire lock for session $sessionId"
+        );
+        
+        
     }
 
     /**
@@ -398,15 +295,25 @@ END;
      */
     function releaseLock($sessionId, $lockToken)
     {
-        $lockKey = generateLockKey($sessionId);
-        $result = $this->redisClient->eval(self::unlockScript, 1, $lockKey, $lockToken);
-        if ($result !== 1) {
+        $lockKey = $this->generateLockKey($sessionId);
+        $success = false;
+
+        $storedLockToken = apc_fetch($lockKey, $success);
+
+        if ($success == false) {
             throw new LostLockException(
                 "Releasing lock revealed lock had been lost."
             );
         }
+        //TODO - there is a race condition here between this code
+        //and force releasing a lock
+        apc_delete($lockKey);
 
-        return $result;
+        if ($storedLockToken !== $lockToken) {
+            throw new LostLockException(
+                "Releasing lock revealed lock had been lost."
+            );
+        }
     }
 
     /**
@@ -415,8 +322,8 @@ END;
      */
     function forceReleaseLock($sessionID)
     {
-        $lockKey = generateLockKey($sessionID);
-        $this->redisClient->del($lockKey);
+        $lockKey = $this->generateLockKey($sessionID);
+        apc_delete($lockKey);
     }
 
     /**
@@ -426,24 +333,50 @@ END;
      * @return mixed
      * @throws AsmException
      */
-    function renewLock($sessionID, $lockToken, $lockTimeMS)
+    function renewLock($sessionId, $lockToken, $lockTimeMS)
     {
-        $lockKey = generateLockKey($sessionID);
-        $result = $this->redisClient->eval(
-            self::renewLockScript, 
-            1, 
-            $lockKey,
-            $lockToken,
-            $lockTimeMS
-        );
- 
-        if ($result != "OK") {
-            throw new AsmException("Failed to renew lock.");
+        $lockKey = $this->generateLockKey($sessionId);
+        $success = false;
+
+        $storedLockToken = apc_fetch($lockKey);
+
+        if ($storedLockToken !== $lockToken) {
+            throw new LostLockException(
+                "Renewing lock revealed lock had been lost."
+            );
         }
 
-        return $result;
+        $lockTimeSeconds = intval(ceil($lockTimeMS / 1000));
+        $result = apc_store($lockKey, $lockToken, $lockTimeSeconds);
+        
+        if (!$result) {
+            throw new LostLockException(
+                "Failed to renew lock"
+            );
+        }
     }
-    
+
+
+    /**
+     * @param $sessionId
+     * @return string
+     *
+     */
+    function generateSessionDataKey($sessionId)
+    {
+        return $this->prefix.'session:'.$sessionId;
+    }
+
+    function generateZombieKey($dyingSessionId)
+    {
+        return $this->prefix.'zombie:'.$dyingSessionId;
+    }
+
+    function generateLockKey($sessionId)
+    {
+        return $this->prefix.'lock:'.$sessionId;
+    }
+
 
 //
 //    /**
@@ -489,79 +422,4 @@ END;
 
 
 
-    /**
-     * @param $sessionID
-     * @param $index
-     * @return int
-     */
-    function get($sessionID, $index) {
-        $key = generateAsyncKey($sessionID, $index);
-
-        return $this->redisClient->hget($key, $index);
-    }
-
-
-    /**
-     * @param $sessionID
-     * @param $index
-     * @param $value
-     * @return int
-     */
-    function set($sessionID, $index, $value) {
-        $key = generateAsyncKey($sessionID, $index);
-
-        return $this->redisClient->hset($key, $index, $value);
-    }
-
-
-    /**
-     * @param $sessionID
-     * @param $index
-     * @param $increment
-     * @return int
-     */
-    function increment($sessionID, $index, $increment) {
-        $key = generateAsyncKey($sessionID, $index);
-
-        return $this->redisClient->hincrby($key, $index, $increment);
-    }
-
-    /**
-     * @param $sessionID
-     * @param $index
-     * @return array
-     */
-    function getList($sessionID, $index) {
-        $key = generateAsyncKey($sessionID, $index);
-
-        return $this->redisClient->lrange($key, 0, -1);
-    }
-
-    /**
-     * @param $sessionID
-     * @param $index
-     * @param $value
-     * @return int
-     */
-    function appendToList($sessionID, $index, $value) {
-
-        $key = generateAsyncKey($sessionID, $index);
-        
-        if (is_array($value)) {
-            return $this->redisClient->rpush($key, $value);
-        }
-        else {
-            return $this->redisClient->rpush($key, [$value]);
-        }
-    }
-
-    /**
-     * @param $sessionID
-     * @param $index
-     * @return int
-     */
-    function clearList($sessionID, $index) {
-        $key = generateAsyncKey($sessionID, $index);
-        return $this->redisClient->del($key);
-    }
 }
