@@ -9,7 +9,7 @@ try {
 
     header($session->getHeader());
 
-    
+
     $count = 0;
 
     for ($x=0 ; $x<10 ; $x++) {

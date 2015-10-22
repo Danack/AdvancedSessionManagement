@@ -9,12 +9,11 @@ use ASM\SessionManager;
 
 abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase {
 
-
     /**
      * @var \Auryn\Injector
      */
     protected $injector;
-    
+
     protected function setUp() {
         $this->injector = createProvider();
     }
@@ -112,6 +111,10 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase {
         $openSession->close();
     }
 
+    function testDestructOfSessionUnlocks()
+    {
+        $this->fail("Not implemented.");
+    }
 
     function testRenewLockFails()
     {

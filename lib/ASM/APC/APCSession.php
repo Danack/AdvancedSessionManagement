@@ -1,13 +1,13 @@
 <?php
 
 
-namespace ASM\Redis;
+namespace ASM\APC;
 
 
 use ASM\AsmException;
 use ASM\Session;
 use ASM\SessionManager;
-use ASM\Data;
+
 
 class APCSession implements Session
 {
@@ -107,7 +107,8 @@ class APCSession implements Session
         $this->apcDriver->save(
             $this->sessionId,
             $this->data,
-            $this->currentProfiles
+            $this->currentProfiles,
+            $this->sessionManager
         );
     }
 

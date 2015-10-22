@@ -2,9 +2,9 @@
 
 namespace ASM\Mock;
 
-class XKCDIDGenerator implements \ASM\IDGenerator {
+class XKCDIDGenerator implements \ASM\IdGenerator {
 
-    function generateSessionID()
+    function generateSessionId()
     {
         return "4";
     }

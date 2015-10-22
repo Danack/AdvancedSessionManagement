@@ -33,17 +33,6 @@ class FileSession implements Session
      */
     protected $userProfiles = null;
 
-
-//    /**
-//     * @var resource 
-//     */
-//    protected $fileHandle = null;
-//
-//    /**
-//     * @var string Used to detect
-//     */
-//    protected $lockToken;
-
     /**
      * @var FileInfo
      */
@@ -140,12 +129,10 @@ class FileSession implements Session
     }
 
     /**
-     *
+     * @param bool $saveData
      */
     function close($saveData = true)
     {
-        //releaseLock
-        //    $this->__destruct();
         $this->fileDriver->close($this->fileInfo);
     }
 
@@ -156,14 +143,8 @@ class FileSession implements Session
 
     function releaseLock()
     {
-        $this->fileDriver->releaseLock($this->sessionId, $this->fileInfo);
-//        if ($this->fileHandle != null) {
-//            $fileHandle = $this->fileHandle; 
-//            $this->fileHandle = null;
-//            @fclose($fileHandle);
-//        }
+        $this->fileDriver->releaseLock($this->fileInfo);
     }
-
 
     /**
      * @param $milliseconds

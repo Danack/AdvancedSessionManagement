@@ -1,6 +1,6 @@
 <?php
 
-namespace ASM\Redis;
+namespace ASM\APC;
 
 use ASM\AsmException;
 use ASM\Driver;
@@ -9,7 +9,6 @@ use ASM\Serializer;
 use ASM\SessionManager;
 use ASM\LostLockException;
 use ASM\FailedToAcquireLockException;
-use ASM\SessionManagerInterface;
 use ASM\SessionConfig;
 
 
@@ -139,11 +138,11 @@ class APCDriver implements Driver
     }
 
     /**
-     * Create a new session
-     * @return RedisSession
      * @param SessionManager $sessionManager
      * @param null $userProfile
+     * @return APCSession
      * @throws AsmException
+     * @throws LostLockException
      */
     function createSession(SessionManager $sessionManager, $userProfile = null)
     {
@@ -162,7 +161,7 @@ class APCDriver implements Driver
         for ($count = 0; $count < 10; $count++) {
             $sessionId = $this->idGenerator->generateSessionID();
             $lockToken = $this->acquireLockIfRequired($sessionId, $sessionManager);
-            $dataKey = generateSessionDataKey($sessionId);
+            $dataKey = $this->generateSessionDataKey($sessionId);
             $set = apc_store(
                 $dataKey,
                 $dataString,
@@ -336,8 +335,6 @@ class APCDriver implements Driver
     function renewLock($sessionId, $lockToken, $lockTimeMS)
     {
         $lockKey = $this->generateLockKey($sessionId);
-        $success = false;
-
         $storedLockToken = apc_fetch($lockKey);
 
         if ($storedLockToken !== $lockToken) {

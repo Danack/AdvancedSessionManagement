@@ -1,8 +1,11 @@
+
+# DO NOT USE
+
+It's not working correctly yet...
+
 # Advanced session management
 
-
 ## Terminology
-
 
 ### UserProfile
 

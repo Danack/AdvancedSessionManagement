@@ -3,7 +3,7 @@
 
 namespace ASM\Tests;
 
-use ASM\IDGenerator;
+use ASM\IdGenerator;
 use Predis\Client as RedisClient;
 use ASM\Redis\RedisDriver;
 

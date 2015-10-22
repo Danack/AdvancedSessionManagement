@@ -6,6 +6,7 @@ $autoloader = require(__DIR__.'/../vendor/autoload.php');
 
 /** @var $autoloader \Composer\Autoload\ClassLoader */
 $autoloader->add('ASM', __DIR__);
+$autoloader->add('ASM\Tests', __DIR__);
 
 
 function getRedisConfig()
@@ -27,6 +28,40 @@ function getRedisOptions()
     );
 
     return $redisOptions;
+}
+
+
+function isAPCAvailable()
+{
+    if(extension_loaded('apc') == false) {
+        return false;
+    }
+    if (ini_get('apc.enabled') == false) {
+        return false;
+    }
+
+    $key = "AsmTest";
+    $dataTest = "AsmTest".time().uniqid("AsmTest");
+    
+    $result = apc_store($key, $dataTest, 5);
+    
+    if (!$result) {
+        return false;
+    }
+    
+    $success = false;
+    
+    $storedValue = apc_fetch($key, $success);
+    
+    if ($success == false) {
+        return false;
+    }
+    
+    if ($storedValue === $dataTest) {
+        return true;
+    }
+    
+    return false;
 }
 
 
@@ -71,7 +106,10 @@ function createSessionManager(ASM\Driver $driver)
     $sessionConfig = new ASM\SessionConfig(
         'testSession',
         3600,
-        10
+        10,
+        $lockMode = ASM\SessionConfig::LOCK_ON_OPEN,
+        $lockTimeInMilliseconds = 5000,
+        $maxLockWaitTimeMilliseconds = 300
     );
 
     return new ASM\SessionManager($sessionConfig, $driver);

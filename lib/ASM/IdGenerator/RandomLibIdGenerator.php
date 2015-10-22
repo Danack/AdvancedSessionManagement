@@ -4,7 +4,7 @@
 namespace ASM\IdGenerator;
 
 use RandomLib\Factory;
-use ASM\IDGenerator;
+use ASM\IdGenerator;
 
 
 class RandomLibIdGenerator implements IdGenerator
@@ -21,7 +21,7 @@ class RandomLibIdGenerator implements IdGenerator
         $this->generator = $factory->getMediumStrengthGenerator();
     }
 
-    function generateSessionID()
+    function generateSessionId()
     {
         // We use a restricted set of characters to allow simplifications 
         // in the session driver implementations.

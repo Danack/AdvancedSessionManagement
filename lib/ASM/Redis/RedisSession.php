@@ -3,12 +3,9 @@
 
 namespace ASM\Redis;
 
-
 use ASM\AsmException;
-use ASM\Redis\RedisDriver;
 use ASM\ConcurrentSession;
 use ASM\SessionManager;
-use ASM\Data;
 
 class RedisSession implements ConcurrentSession
 {
@@ -207,8 +204,9 @@ class RedisSession implements ConcurrentSession
 
 
     /**
-     * @param $sessionID
      * @param $milliseconds
+     * @throws AsmException
+     * @internal param $sessionID
      * @return mixed
      */
     function renewLock($milliseconds)

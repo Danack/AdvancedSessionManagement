@@ -12,7 +12,7 @@ use ASM\ValidationConfig;
 use Predis\Client as RedisClient;
 use ASM\Redis\RedisDriver;
 use ASM\ConcurrentSession;
-use ASM\IDGenerator;
+use ASM\IdGenerator;
 
 
 abstract class AbstractConcurrentSessionTest extends \PHPUnit_Framework_TestCase {

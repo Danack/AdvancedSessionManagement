@@ -9,7 +9,6 @@ use ASM\Serializer;
 use ASM\SessionManager;
 use ASM\LostLockException;
 use ASM\FailedToAcquireLockException;
-use ASM\SessionManagerInterface;
 use ASM\SessionConfig;
 
 use Predis\Client as RedisClient;
@@ -394,7 +393,9 @@ END;
 
     /**
      * @param $sessionId
-     * @return bool|mixed
+     * @param $lockToken
+     * @return mixed
+     * @throws LostLockException
      */
     function releaseLock($sessionId, $lockToken)
     {

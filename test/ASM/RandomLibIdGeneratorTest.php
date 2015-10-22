@@ -13,7 +13,7 @@ class IDGeneratorTest extends \PHPUnit_Framework_TestCase {
      */
     function testSerialization() {        
         $idGenerator = new RandomLibIdGenerator();
-        $sessionID = $idGenerator->generateSessionID();
+        $sessionID = $idGenerator->generateSessionId();
         
         $this->assertInternalType('string', $sessionID);
         $this->assertTrue(strlen($sessionID) > 8);
