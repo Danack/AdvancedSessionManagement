@@ -17,16 +17,16 @@ class FunctionTest extends \PHPUnit_Framework_TestCase {
 
         $tests = array(
 [
-    'expected' => 'Set-Cookie: TestSession=12345; expires=Wed, 04-Mar-1998 12:46:40 UTC; Max-Age=1000; httpOnly',
+    'expected' => 'TestSession=12345; expires=Wed, 04-Mar-1998 12:46:40 UTC; Max-Age=1000; httpOnly',
     'params' => array(),
 ],
 [
-    'expected' => 'Set-Cookie: TestSession=12345; expires=Wed, 04-Mar-1998 12:46:40 UTC; Max-Age=1000; path=/; domain=.example.com; httpOnly',
+    'expected' => 'TestSession=12345; expires=Wed, 04-Mar-1998 12:46:40 UTC; Max-Age=1000; path=/; domain=.example.com; httpOnly',
     'params' => array('domain' => '.example.com', 'path' => '/'),
 ],
 
 [
-    'expected' => 'Set-Cookie: TestSession=12345; expires=Wed, 04-Mar-1998 12:46:40 UTC; Max-Age=1000; path=/; domain=www.example.com; httpOnly',
+    'expected' => 'TestSession=12345; expires=Wed, 04-Mar-1998 12:46:40 UTC; Max-Age=1000; path=/; domain=www.example.com; httpOnly',
     'params' => array('domain' => 'www.example.com', 'path' => '/'),
 ],
         );
@@ -46,7 +46,9 @@ class FunctionTest extends \PHPUnit_Framework_TestCase {
             }
 
             $time = mktime (12, 30, 0, 3, 4, 1998);
-            $result = generateCookieHeader($time, $sessionName, $sessionID, $lifetime, $path, $domain);
+            $headerAndName = generateCookieHeader($time, $sessionName, $sessionID, $lifetime, $path, $domain);
+            $this->assertArrayHasKey('Set-Cookie', $headerAndName);
+            $result = $headerAndName['Set-Cookie'];
             $this->assertEquals($expected, $result);
         }
     }

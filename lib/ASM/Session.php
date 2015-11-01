@@ -6,6 +6,16 @@ namespace ASM;
 
 interface Session
 {
+
+    /**
+     * @param $caching one of the \ASM\SessionManager::CACHE_SKIP constants
+     * @param null $lastModifiedTime
+     * @param null $path
+     * @param bool $domain
+     * @param bool $secure
+     * @param bool $httpOnly
+     * @return mixed
+     */
     function getHeaders($caching,
                         $lastModifiedTime = null,
                         $path = null,

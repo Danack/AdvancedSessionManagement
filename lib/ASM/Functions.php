@@ -18,6 +18,8 @@ namespace ASM {
 
 namespace {
 
+    use ASM\AsmException;
+    
 
     /**
      * @param $caching
@@ -46,37 +48,37 @@ namespace {
                 break;
             }
             case(\ASM\SessionManager::CACHE_PUBLIC): {
-                $headers[] = "Expires: ".$expireDate;
-                $headers[] = "Cache-Control: public, max-age=".$maxAgeTime;
+                $headers['Expires'] = $expireDate;
+                $headers['Cache-Control'] = "public, max-age=".$maxAgeTime;
                 if ($lastModifiedDate) {
                     $headers[] = "Last-Modified: ".$lastModifiedDate;
                 }
                 break;
             }
             case(\ASM\SessionManager::CACHE_PRIVATE): {
-                $headers[] = "Expires: ".$expireDate;
-                $headers[] = "Cache-Control: private, max-age=".$maxAgeTime." pre-check=".$maxAgeTime;
+                $headers['Expires'] = "".$expireDate;
+                $headers['Cache-Control'] = "private, max-age=".$maxAgeTime." pre-check=".$maxAgeTime;
                 if ($lastModifiedDate) {
-                    $headers[] = "Last-Modified: ".$lastModifiedDate;
+                    $headers['Last-Modified'] = "".$lastModifiedDate;
                 }
                 break;
             }
             case(\ASM\SessionManager::CACHE_PRIVATE_NO_EXPIRE): {
-                $headers[] = "Cache-Control: private, max-age=".$maxAgeTime." pre-check=".$maxAgeTime;
+                $headers['Cache-Control'] = "private, max-age=".$maxAgeTime." pre-check=".$maxAgeTime;
                 if ($lastModifiedDate) {
-                    $headers[] = "Last-Modified: ".$lastModifiedDate;
+                    $headers['Last-Modified'] = "".$lastModifiedDate;
                 }
                 break;
             }
             case(\ASM\SessionManager::CACHE_NO_CACHE): {
-                $headers[] = "Expires: ".$expireDate;
-                $headers[] = "Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0";
-                $headers[] = "Pragma: no-cache";
+                $headers['Expires'] = "".$expireDate;
+                $headers['Cache-Control'] = "Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0";
+                $headers['Pragma'] = "no-cache";
                 break;
             }
             
             default: {
-                throw new \InvalidArgumentException("Unknown cache setting '$caching'.");
+                throw new AsmException("Unknown cache setting '$caching'.");
             }
         }
 
@@ -104,7 +106,7 @@ namespace {
                                   $httpOnly = true)
     {
 
-        $COOKIE_SET_COOKIE = "Set-Cookie: ";
+        //$COOKIE_SET_COOKIE = "";
         $COOKIE_EXPIRES = "; expires=";
         $COOKIE_MAX_AGE = "; Max-Age=";
         $COOKIE_PATH = "; path=";
@@ -112,7 +114,7 @@ namespace {
         $COOKIE_SECURE = "; secure";
         $COOKIE_HTTPONLY = "; httpOnly";
 
-        $header = $COOKIE_SET_COOKIE;
+        $header = "";//$COOKIE_SET_COOKIE;
         $header .= $sessionName.'='.$sessionID;
 
         $expireTime = $time + $lifetime;

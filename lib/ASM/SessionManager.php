@@ -367,17 +367,19 @@ class SessionManager
         $this->driver->deleteSession($sessionID);
     }
     
-    function getHeaders($sessionId, $caching,
-            $lastModifiedTime,
-            $domain,
-            $path,
-            $secure,
-            $httpOnly)
-    {
+    function getHeaders(
+        $sessionId, 
+        $caching,
+        $lastModifiedTime,
+        $domain,
+        $path,
+        $secure,
+        $httpOnly
+    ) {
         $time = time();
 
         $headers = [];
-        $headers[] = generateCookieHeader($time,
+        $headers["Set-Cookie"] = generateCookieHeader($time,
             $this->getName(),
             $sessionId,
             $this->getLifetime(),
