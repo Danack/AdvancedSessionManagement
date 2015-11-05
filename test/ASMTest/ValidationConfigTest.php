@@ -2,12 +2,15 @@
 
 
 
-namespace ASM\Tests;
+namespace ASMTest\Tests;
 
 use ASM\SessionManager;
 
 use ASM\ValidationConfig;
 
+/**
+ * Class ValidationConfigTest
+ */
 class ValidationConfigTest extends \PHPUnit_Framework_TestCase {
 
     function testBasic()

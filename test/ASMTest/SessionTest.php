@@ -1,7 +1,7 @@
 <?php
 
 
-namespace ASM\Tests;
+namespace ASMTest\Tests;
 
 use ASM\SessionManager;
 use ASM\SessionConfig;
@@ -12,6 +12,7 @@ use Predis\Client as RedisClient;
 use ASM\Redis\RedisDriver;
 use ASM\Serializer\JsonSerializer;
 use ASM\FailedToAcquireLockException;
+
 
 
 class SessionTest extends \PHPUnit_Framework_TestCase {
@@ -38,8 +39,12 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
      * @param \ASM\SimpleProfile $sessionProfile
      * @return SessionManager
      */
-    function createSessionManager(ValidationConfig $validationConfig = null, SimpleProfile $sessionProfile = null) {
+    function createSessionManager(
+        ValidationConfig $validationConfig = null,
+        SimpleProfile $sessionProfile = null
+    ) {
         $redisClient = new RedisClient($this->redisConfig, $this->redisOptions);
+        checkClient($redisClient, $this);
         $serializer = new JsonSerializer();
         $redisDriver = new RedisDriver($redisClient, $serializer);
         $sessionManager = new SessionManager(
@@ -303,8 +308,10 @@ class SessionTest extends \PHPUnit_Framework_TestCase {
     {
         $redisClient = new RedisClient($this->redisConfig, $this->redisOptions);
         
+        checkClient($redisClient, $this);
+
         //This generator always return the same ID.
-        $idGenerator = new \ASM\Mock\XKCDIDGenerator();
+        $idGenerator = new \ASMTest\Stub\XKCDIDGenerator();
         $redisDriver = new RedisDriver(
             $redisClient,
             null,

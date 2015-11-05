@@ -1,7 +1,12 @@
 <?php
 
-namespace ASM\Tests;
+namespace ASMTest\Tests;
 
+use ASM\Asm;
+
+/**
+ * Class FunctionTest
+ */
 class FunctionTest extends \PHPUnit_Framework_TestCase {
 
     protected function setUp() {
@@ -46,7 +51,7 @@ class FunctionTest extends \PHPUnit_Framework_TestCase {
             }
 
             $time = mktime (12, 30, 0, 3, 4, 1998);
-            $headerAndName = generateCookieHeader($time, $sessionName, $sessionID, $lifetime, $path, $domain);
+            $headerAndName = Asm::generateCookieHeader($time, $sessionName, $sessionID, $lifetime, $path, $domain);
             $this->assertArrayHasKey('Set-Cookie', $headerAndName);
             $result = $headerAndName['Set-Cookie'];
             $this->assertEquals($expected, $result);

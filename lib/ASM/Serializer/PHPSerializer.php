@@ -6,7 +6,6 @@ use ASM\Serializer;
 
 class PHPSerializer implements Serializer
 {
-
     /**
      * @param array $data
      * @return mixed

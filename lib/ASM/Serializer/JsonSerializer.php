@@ -7,7 +7,6 @@ use ASM\Serializer;
 
 class JsonSerializer implements Serializer
 {
-
     /**
      * @param array $data
      * @return mixed

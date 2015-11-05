@@ -1,7 +1,7 @@
 <?php
 
 
-namespace ASM\Tests;
+namespace ASMTest\Tests\File;
 
 use org\bovigo\vfs\vfsStream;
 use org\bovigo\vfs\vfsStreamDirectory;
@@ -9,10 +9,28 @@ use org\bovigo\vfs\vfsStreamDirectory;
 
 use ASM\Serializer\PHPSerializer;
 use ASM\IdGenerator\RandomLibIdGenerator;
+use ASMTest\Tests\AbstractDriverTest;
 
+/**
+ * Class FileDriverTest
+ * 
+ */
+class FileDriverTest extends AbstractDriverTest
+{
+    /**
+     * @var \Auryn\Injector
+     */
+    protected $injector;
 
-class FileDriverTest extends AbstractDriverTest {
-    function getDriver() {
+    protected function setUp() {
+        $this->injector = createProvider();
+    }
+
+    /**
+     * @return mixed
+     */
+    function getDriver()
+    {
 //        vfsStream::setup('sessionTest');
 //        $path = vfsStream::url('sessionTest');
 //        // this is showing errors
@@ -22,8 +40,10 @@ class FileDriverTest extends AbstractDriverTest {
 
         return $this->injector->make('ASM\File\FileDriver', [':path' => $path]);
     }
-    
-    
+
+    /**
+     *
+     */
     function testEmptyDirNotAcceptable()
     {
         $this->setExpectedException('ASM\AsmException');
@@ -34,7 +54,7 @@ class FileDriverTest extends AbstractDriverTest {
     /**
      * This test just covers a few lines in the constructor of ASM\Driver\FileDriver
      * it has no behaviour to test.
-     * @throws \Auryn\InjectorException
+     *
      */
     function testCoverage()
     {
@@ -52,7 +72,10 @@ class FileDriverTest extends AbstractDriverTest {
 
         $fileDriver = new \ASM\File\FileDriver($path, $serializer, $idGenerator);
     }
-    
+
+    /**
+     *
+     */
     function testUnwriteable()
     {
         $this->setExpectedException('ASM\AsmException');

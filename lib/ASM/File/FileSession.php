@@ -106,6 +106,11 @@ class FileSession implements Session
             $this->fileInfo
         );
     }
+    
+    function delete()
+    {
+        $this->fileDriver->deleteSessionByID($this->sessionId);
+    }
 
     function setData(array $data)
     {
@@ -115,17 +120,7 @@ class FileSession implements Session
 
     function &getData()
     {
-        throw new \Exception("Not implemented yet.");
-    }
-
-    /**
-     *
-     */
-    function loadData()
-    {
-        $data = $this->fileDriver->read($this->sessionId);
-
-        return $data;
+        return $this->data;
     }
 
     /**

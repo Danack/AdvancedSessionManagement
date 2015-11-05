@@ -10,7 +10,7 @@ use ASM\SessionManager;
 use ASM\LostLockException;
 use ASM\FailedToAcquireLockException;
 use ASM\SessionConfig;
-
+use ASM\Session;
 use Predis\Client as RedisClient;
 
 /**
@@ -167,7 +167,7 @@ END;
      * @throws AsmException
      * @return null|string
      */
-    function openSession($sessionId, SessionManager $sessionManager, $userProfile = null)
+    function openSessionByID($sessionId, SessionManager $sessionManager, $userProfile = null)
     {
         $sessionId = (string)$sessionId;
 
@@ -284,7 +284,7 @@ END;
      * @param $sessionID
      * @return mixed|void
      */
-    function deleteSession($sessionID)
+    function deleteSessionByID($sessionID)
     {
         $dataKey = generateSessionDataKey($sessionID);
         $this->redisClient->del($dataKey);
@@ -295,8 +295,9 @@ END;
      * @param $saveData
      * @param $existingProfiles
      */
-    function save($sessionID, $saveData, $existingProfiles)
+    function save(Session $session, $saveData, $existingProfiles)
     {
+        $sessionID = $session->getSessionId();
         $sessionLifeTime = 3600; // 1 hour
 
         $data = [];
@@ -414,7 +415,7 @@ END;
      * @param $sessionID
      * @return mixed|void
      */
-    function forceReleaseLock($sessionID)
+    function forceReleaseLockByID($sessionID)
     {
         $lockKey = generateLockKey($sessionID);
         $this->redisClient->del($lockKey);

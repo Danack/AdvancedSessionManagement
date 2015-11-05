@@ -1,7 +1,7 @@
 <?php
 
 
-namespace ASM\Tests;
+namespace ASMTest\Tests;
 
 use ASM\SessionManager;
 use ASM\SessionConfig;

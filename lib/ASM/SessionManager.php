@@ -100,7 +100,7 @@ class SessionManager
 
         $sessionID = $cookieData[$this->sessionConfig->getSessionName()];
 
-        $session = $this->driver->openSession($sessionID, $this, $userProfile);
+        $session = $this->driver->openSessionByID($sessionID, $this, $userProfile);
 
         if ($session == null) {
             $this->invalidSessionAccessed();
@@ -364,9 +364,20 @@ class SessionManager
      */
     function deleteSession($sessionID)
     {
-        $this->driver->deleteSession($sessionID);
+        $this->driver->deleteSessionByID($sessionID);
     }
-    
+
+    /**
+     * @param $sessionId
+     * @param $caching
+     * @param $lastModifiedTime
+     * @param $domain
+     * @param $path
+     * @param $secure
+     * @param $httpOnly
+     * @return array
+     * @throws AsmException
+     */
     function getHeaders(
         $sessionId, 
         $caching,
@@ -379,7 +390,7 @@ class SessionManager
         $time = time();
 
         $headers = [];
-        $headers["Set-Cookie"] = generateCookieHeader($time,
+        $headers["Set-Cookie"] = ASM::generateCookieHeader($time,
             $this->getName(),
             $sessionId,
             $this->getLifetime(),
@@ -390,7 +401,7 @@ class SessionManager
 
         $expireTime = $time + $this->getLifetime();
 
-        $cachingHeaders = getCacheHeaders(
+        $cachingHeaders = ASM::getCacheHeaders(
             $caching,
             $expireTime,
             $lastModifiedTime

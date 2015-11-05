@@ -4,10 +4,14 @@
 namespace ASM;
 
 
-
+/**
+ * Interface Driver
+ * This interface is only called by SessionManager. Each session implementation
+ * is free to have the other functionality as needed.
+ * @package ASM
+ */
 interface Driver
 {
-
     const E_SESSION_ID_CLASS = 1;
 
     /**
@@ -18,8 +22,7 @@ interface Driver
      * @param null $userProfile
      * @return Session|null The newly opened session
      */
-
-    function openSession($sessionID, SessionManager $sessionManager, $userProfile = null);
+    function openSessionByID($sessionID, SessionManager $sessionManager, $userProfile = null);
 
     /**
      * Create a new session.
@@ -31,6 +34,7 @@ interface Driver
 
 
     /**
+     * Destroy any sessions that are managed by this driver that have expired
      * @return mixed
      */
     //function destroyExpiredSessions();
@@ -39,16 +43,16 @@ interface Driver
      * Delete a single session that matches the $sessionID
      * @param $sessionID
      */
-    function deleteSession($sessionID);
-
-    //function releaseLock($sessionID, $lockToken);
-    
-    //function acquireLock($sessionID, $lockTimeMS, $acquireTimeoutMS);
+    function deleteSessionByID($sessionID);
 
     /**
      * @param $sessionID
      * @return mixed
      */
-    function forceReleaseLock($sessionID);
+    function forceReleaseLockByID($sessionID);
+
+    //function releaseLock($sessionID, $lockToken);
+    //function acquireLock($sessionID, $lockTimeMS, $acquireTimeoutMS);
+    //function findSessionIDFromZombieID($zombieSsessionID);
 }
 

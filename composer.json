@@ -12,9 +12,9 @@
     "require-dev": {
         "mikey179/vfsStream": "1.5.0",
         "phpunit/phpunit": "4.6.6",
-        "rdlowrey/auryn": "^1.0.2"
+        "rdlowrey/auryn": "^1.0.2",
+        "squizlabs/php_codesniffer": "^2.0.0"
     },
-
     "require": {
         "ircmaxell/random-lib": "^1.1.0",
         "predis/predis": "^1.0.1"
@@ -24,6 +24,11 @@
             "ASM": "lib/"
         },
         "files": ["lib/ASM/Functions.php"]
+    },
+    "autoload-dev": {
+        "psr-0": {
+            "ASMTest": "test/"
+        }
     },
     "extra": {
         "branch-alias": {

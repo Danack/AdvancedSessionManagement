@@ -1,34 +1,20 @@
 <?php
 
 
+namespace ASM;
 
-
-namespace ASM {
-
-    class Functions
-    {
-
-        static function load()
-        {
-            //Only used to trigger file load
-        }
-    }
-}
-
-
-namespace {
-
-    use ASM\AsmException;
+use ASM\AsmException;
     
-
+class ASM 
+{
     /**
      * @param $caching
      * @param $expireTime
      * @param $lastModifiedTime
      * @return array
-     * @throws InvalidArgumentException
+     * @throws \InvalidArgumentException
      */
-    function getCacheHeaders($caching, $expireTime, $lastModifiedTime = null)
+    public static function getCacheHeaders($caching, $expireTime, $lastModifiedTime = null)
     {
         $headers = [];
 
@@ -96,17 +82,15 @@ namespace {
      * @param bool $httpOnly
      * @return string
      */
-    function generateCookieHeader($time,
+    public static function generateCookieHeader($time,
                                   $sessionName,
                                   $sessionID,
                                   $lifetime,
                                   $path = null,
                                   $domain = false,
                                   $secure = false,
-                                  $httpOnly = true)
-    {
-
-        //$COOKIE_SET_COOKIE = "";
+                                  $httpOnly = true
+    ) {
         $COOKIE_EXPIRES = "; expires=";
         $COOKIE_MAX_AGE = "; Max-Age=";
         $COOKIE_PATH = "; path=";
@@ -114,35 +98,35 @@ namespace {
         $COOKIE_SECURE = "; secure";
         $COOKIE_HTTPONLY = "; httpOnly";
 
-        $header = "";//$COOKIE_SET_COOKIE;
-        $header .= $sessionName.'='.$sessionID;
+        $headerString = "";
+        $headerString .= $sessionName.'='.$sessionID;
 
         $expireTime = $time + $lifetime;
         $expireDate = date("D, d-M-Y H:i:s T", $expireTime);
-        $header .= $COOKIE_EXPIRES;
-        $header .= $expireDate;
+        $headerString .= $COOKIE_EXPIRES;
+        $headerString .= $expireDate;
 
-        $header .= $COOKIE_MAX_AGE;
-        $header .= $lifetime;
+        $headerString .= $COOKIE_MAX_AGE;
+        $headerString .= $lifetime;
 
         if ($path) {
-            $header .= $COOKIE_PATH;
-            $header .= $path;
+            $headerString .= $COOKIE_PATH;
+            $headerString .= $path;
         }
 
         if ($domain) {
-            $header .= $COOKIE_DOMAIN;
-            $header .= $domain;
+            $headerString .= $COOKIE_DOMAIN;
+            $headerString .= $domain;
         }
 
         if ($secure) {
-            $header .= $COOKIE_SECURE;
+            $headerString .= $COOKIE_SECURE;
         }
 
         if ($httpOnly) {
-            $header .= $COOKIE_HTTPONLY;
+            $headerString .= $COOKIE_HTTPONLY;
         }
 
-        return $header;
+        return ['Set-Cookie' => $headerString];
     }
 }

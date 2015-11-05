@@ -1,7 +1,7 @@
 <?php
 
 
-namespace ASM\Tests;
+namespace ASMTest\Tests;
 
 use ASM\Redis\RedisSession;
 use ASM\ConcurrentSessionManager;
@@ -28,17 +28,25 @@ abstract class AbstractConcurrentSessionTest extends \PHPUnit_Framework_TestCase
      */
     //abstract function getConcurrentDriver();
 
-     
     /**
      * @var \ASM\Redis\RedisDriver
      */
     private $redisDriver;
+
+    /**
+     * @var \Auryn\Injector
+     */
+    protected $injector;
     
     /**
      *
      */
     protected function setUp() {
 
+            
+        $this->injector = createProvider();
+    
+        
         $sessionConfig = new SessionConfig(
             'SessionTest',
             1000,

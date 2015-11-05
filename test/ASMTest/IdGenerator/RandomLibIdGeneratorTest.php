@@ -1,6 +1,6 @@
 <?php
 
-namespace ASM\Tests;
+namespace ASMTest\Tests;
 
 
 

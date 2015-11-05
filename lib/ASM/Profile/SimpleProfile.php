@@ -5,7 +5,6 @@ namespace ASM\Profile;
 
 class SimpleProfile
 {
-
     private $ipAddress;
 
     private $userAgent;

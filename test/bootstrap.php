@@ -182,4 +182,16 @@ function createProvider($mocks = array(), $shares = array())
     return $injector;
 }
 
- 
+function checkClient($redisClient, \PHPUnit_Framework_TestCase $test)
+{
+    try {
+        /** @var $redisClient \Predis\Client */
+        $result = $redisClient->ping("Shamoan");
+        if ($result != "Shamoan") {
+            throw new \Exception("Redis ping is broken");
+        }
+    }
+    catch (\Exception $e) {
+        $test->markTestSkipped("Redis unavailable");
+    }
+}

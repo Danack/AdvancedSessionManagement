@@ -103,7 +103,7 @@ class RedisSession implements ConcurrentSession
     function save()
     {
         $this->redisDriver->save(
-            $this->sessionId,
+            $this,
             $this->data,
             $this->currentProfiles
         );
@@ -125,10 +125,16 @@ class RedisSession implements ConcurrentSession
 
     function delete()
     {
-        $this->redisDriver->deleteSession($this->sessionId);
+        $this->redisDriver->deleteSessionByID($this->sessionId);
         $this->releaseLock();
     }
 
+    function acquireLock($lockTimeMS, $acquireTimeoutMS)
+    {
+        throw new \Exception("Not implemented");
+    }
+    
+    
     /**
      * 
      */

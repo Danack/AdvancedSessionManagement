@@ -1,6 +1,6 @@
 <?php
 
-namespace ASM\Mock;
+namespace ASMTest\Stub;
 
 class XKCDIDGenerator implements \ASM\IdGenerator {
 
