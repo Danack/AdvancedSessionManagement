@@ -10,7 +10,6 @@ namespace ASMTest\Tests;
 class RedisDriverTest extends AbstractDriverTest {
 
     function getDriver() {
-
         $redisClient = $this->injector->make('Predis\Client');
         checkClient($redisClient, $this);
 

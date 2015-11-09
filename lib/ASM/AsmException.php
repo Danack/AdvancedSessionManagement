@@ -8,5 +8,9 @@ namespace ASM;
  * The base exception class for all exceptions that are thrown by this library.
  * @package ASM
  */
-class AsmException extends \Exception {}
+class AsmException extends \Exception
+{
+    const IO_ERROR = 1;
+    
+}
 

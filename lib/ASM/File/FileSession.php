@@ -20,14 +20,6 @@ class FileSession implements Session
      */
     protected $fileDriver;
 
-
-//    /**
-//     * @var string This is random for each lock. It allows us to detect when another
-//     * process has force released the lock, and it is no longer owned by this process.
-//     */
-//    protected $lockContents = null;
-
-
     /**
      * @var null
      */
@@ -106,7 +98,7 @@ class FileSession implements Session
             $this->fileInfo
         );
     }
-    
+
     function delete()
     {
         $this->fileDriver->deleteSessionByID($this->sessionId);
@@ -133,7 +125,13 @@ class FileSession implements Session
 
     function acquireLock($lockTimeMS, $acquireTimeoutMS)
     {
-        // TODO: Implement acquireLock() method.
+        $fileHandle = $this->fileDriver->acquireLock(
+            $this->getSessionId(),
+            $lockTimeMS,
+            $acquireTimeoutMS
+        );
+        
+        $this->fileInfo->lockFileHandle = $fileHandle;
     }
 
     function releaseLock()
@@ -147,7 +145,33 @@ class FileSession implements Session
      */
     function renewLock($milliseconds)
     {
-        //TODO - implement
+        $this->fileDriver->renewLock(
+            $this->getSessionId(),
+            $milliseconds,
+            $this->fileInfo
+        );
+    }
+
+    function forceReleaseLocks()
+    {
+        return $this->fileDriver->forceReleaseLockByID($this->getSessionId());
+    }
+
+    function validateLock()
+    {
+        return $this->fileDriver->validateLock(
+            $this->getSessionId(),
+            $this->fileInfo
+        );
+    }
+
+    function isLocked()
+    {
+        if ($this->fileInfo->lockFileHandle == null) {
+            return false;
+        }
+
+        return true;
     }
 }
 

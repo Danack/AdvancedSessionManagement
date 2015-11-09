@@ -64,35 +64,49 @@ interface Session
     function __destruct();
     
     /**
-     * Test whether the driver thinks the data is locked. The result may
+     * Test whether the session thinks the data is locked. The result may
      * not be accurate when another process has force released the lock.
      *
-     * @param $sessionID
      * @return boolean
      */
-    //function isLocked();
+    function isLocked();
 
     /**
      * If the driver
      * @param $sessionID
      * @return boolean
      */
-    //function validateLock();
+    function validateLock();
 
     /**
-     * Acquire a lock for the session
-     * @param $sessionID
-     * @param $milliseconds
+     * Acquire a lock for the session, or renew it if the session already
+     * has a lock.
+     * @param $lockTimeMS
+     * @param $acquireTimeoutMS
+     * @return mixed
      */
     function acquireLock($lockTimeMS, $acquireTimeoutMS);
 
     /**
+     * Renew the lock the session has on the data.
+     * 
      * @param $milliseconds
      * @return mixed
      */
     function renewLock($milliseconds);
 
+    /**
+     * Release the lock the session has on the data.
+     * @return mixed
+     */
     function releaseLock();
+
+    /**
+     * TODO - naming...
+     * @return mixed
+     */
+    function forceReleaseLocks();
+
 
     /**
      * @param $dyingSessionID

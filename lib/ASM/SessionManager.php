@@ -82,6 +82,16 @@ class SessionManager
         return $this->sessionConfig->getLifetime();
     }
 
+    public function openSessionFromCookie(array $cookieData, $userProfile = null)
+    {
+        if (!array_key_exists($this->sessionConfig->getSessionName(), $cookieData)) {
+            return null;
+        }
+
+        $sessionID = $cookieData[$this->sessionConfig->getSessionName()];
+
+        return $this->openSessionByID($sessionID, $userProfile);
+    }
     /**
      * Opens an existing session.
      *
@@ -92,15 +102,14 @@ class SessionManager
      * @param null $userProfile
      * @return Session|null
      */
-    public function openSession(array $cookieData, $userProfile = null)
+    public function openSessionByID($sessionID, $userProfile = null)
     {
-        if (!array_key_exists($this->sessionConfig->getSessionName(), $cookieData)) {
-            return null;
-        }
-
-        $sessionID = $cookieData[$this->sessionConfig->getSessionName()];
-
-        $session = $this->driver->openSessionByID($sessionID, $this, $userProfile);
+        $session = $this->driver->openSessionByID(
+            $sessionID,
+            $this,
+            $userProfile
+            //TODO - lock mode should be here.
+        );
 
         if ($session == null) {
             $this->invalidSessionAccessed();
@@ -126,13 +135,14 @@ class SessionManager
      */
     function createSession(array $cookieData, $userProfile = null)
     {
-        $existingSession = $this->openSession($cookieData, $userProfile);
-
-        if ($existingSession) {
-            return $existingSession;
+        if (!array_key_exists($this->sessionConfig->getSessionName(), $cookieData)) {
+            return $this->driver->createSession($this, $userProfile);
         }
 
-        return $this->driver->createSession($this, $userProfile);
+        $sessionID = $cookieData[$this->sessionConfig->getSessionName()];
+        $existingSession = $this->openSessionByID($sessionID, $userProfile);
+
+        return $existingSession;
     }
 
 

@@ -10,6 +10,8 @@ use org\bovigo\vfs\vfsStreamDirectory;
 use ASM\Serializer\PHPSerializer;
 use ASM\IdGenerator\RandomLibIdGenerator;
 use ASMTest\Tests\AbstractDriverTest;
+use ASM\File\FileInfo;
+use ASM\AsmException;
 
 /**
  * Class FileDriverTest
@@ -21,9 +23,18 @@ class FileDriverTest extends AbstractDriverTest
      * @var \Auryn\Injector
      */
     protected $injector;
+    
+    private $randomSubdir = "subdir";
 
     protected function setUp() {
         $this->injector = createProvider();
+        $this->randomSubdir = rand(1000000, 10000000);
+        resetMockFunctions();
+    }
+    
+    protected function tearDown()
+    {
+        resetMockFunctions();
     }
 
     /**
@@ -31,14 +42,28 @@ class FileDriverTest extends AbstractDriverTest
      */
     function getDriver()
     {
+// vfsStream does not implement inodes. The File session Driver depends on 
+// inodes to implement locking, and so it cannot be used for testing.
 //        vfsStream::setup('sessionTest');
 //        $path = vfsStream::url('sessionTest');
 //        // this is showing errors
 //        //return $this->injector->make('ASM\Driver\FileDriver', [':path' => $path]);
-        $path = "./sessfiletest/subdir".rand(1000000, 10000000);
+        $path = "./sessfiletest/subdir".$this->randomSubdir;
         @mkdir($path, 0755, true);
 
         return $this->injector->make('ASM\File\FileDriver', [':path' => $path]);
+    }
+
+    /**
+     * @return \ASM\File\FileDriver
+     */
+    public function createDriver()
+    {
+        return $this->getDriver();
+
+//        $vfsStreamDirectory = vfsStream::setup('sessionTest');        
+//        $fileDriver = $this->injector->make('ASM\File\FileDriver', [':path' => $path]);
+//        return $fileDriver; 
     }
 
     /**
@@ -78,43 +103,136 @@ class FileDriverTest extends AbstractDriverTest
      */
     function testUnwriteable()
     {
-        $this->setExpectedException('ASM\AsmException');
         $vfsStreamDirectory = vfsStream::newDirectory('sessionTest', 0);        
         $path = $vfsStreamDirectory->url();
         $fileDriver = $this->injector->make('ASM\File\FileDriver', [':path' => $path]);
-//        new SessionConfig();
-        //$sessionManager = $this->injector->make('ASM\SessionManager', [':sessionName' => 'testUnwriteable']);
 
         $sessionManager = createSessionManager($fileDriver);
+        $this->setExpectedException('ASM\AsmException');
         $fileDriver->createSession($sessionManager);
-    }    
+    }
+    
+    
+    /**
+     *
+     */
+    function testFilePutContentsFail()
+    {
+        $vfsStreamDirectory = vfsStream::newDirectory('sessionTest', 0);        
+        $path = $vfsStreamDirectory->url();
+        $fileDriver = $this->injector->make('ASM\File\FileDriver', [':path' => $path]);
+        $fileInfo = new FileInfo(null);
+
+        mock('file_put_contents', function() {return false;});
+
+        $this->setExpectedException('ASM\AsmException');
+        $fileDriver->save(
+            12345,
+            ['foo' => 'bar'],
+            $existingProfiles = [],
+            $fileInfo
+        );
+    }
+    
+    function testRenameFail()
+    {
+        $fileDriver = $this->getDriver();
+        
+        $fileInfo = new FileInfo(null);
+        mock('rename', function() {return false;});
+        $this->setExpectedException(
+            'ASM\AsmException',
+            AsmException::IO_ERROR
+        );
+        $fileDriver->save(
+            12345,
+            ['foo' => 'bar'],
+            $existingProfiles = [],
+            $fileInfo
+        );
+    }
+
+
+    function testNoLockValidatesAsNoLock()
+    {
+        $fileDriver = $this->getDriver();
+        $fileInfo = new FileInfo(null);
+        $result = $fileDriver->validateLock(12345, $fileInfo);
+        $this->assertFalse($result);
+    }
+    
+    
+   function testValidatesLock_failsDueToMissingMtime()
+   {
+       $fileDriver = $this->getDriver();
+
+       $statFn = function() {
+           return ['ino' => 12345];
+       };
+       mock('stat', $statFn);
+       mock('fstat', $statFn);
+
+       $lockFileHandle = $fileDriver->acquireLock(12345, 10000, 1000);
+       $fileInfo = new FileInfo($lockFileHandle);
+
+       $this->setExpectedException(
+           'ASM\AsmException',
+           AsmException::IO_ERROR
+       );
+       
+       $result = $fileDriver->validateLock(12345, $fileInfo);
+   }
+    
+
+    function testValidatesLock_failsDueToStatNoIno()
+    {
+        $fileDriver = $this->getDriver();
+
+        $statFn = function() {
+            return [];
+        };
+        mock('stat', $statFn);
+        
+        $lockFileHandle = $fileDriver->acquireLock(12345, 10000, 1000);
+        $fileInfo = new FileInfo($lockFileHandle);
+        
+        $result = $fileDriver->validateLock(12345, $fileInfo);
+        $this->assertFalse($result);
+    }
+    
+
+    function testValidatesLock_failsDueToFstatNoIno()
+    {
+        $fileDriver = $this->getDriver();
+        
+        $statFn = function() {
+            return [];
+        };
+
+        mock('fstat', $statFn);
+        
+        $lockFileHandle = $fileDriver->acquireLock(12345, 10000, 1000);
+        $fileInfo = new FileInfo($lockFileHandle);
+        
+        $result = $fileDriver->validateLock(12345, $fileInfo);
+        $this->assertFalse($result);
+    }
+
+
+    function testValidatesLock_failsDueToNotValid()
+    {
+        $fileDriver = $this->getDriver();
+        
+        $lockFileHandle1 = $fileDriver->acquireLock(12345, 10000, 1000);
+        $fileInfo1 = new FileInfo($lockFileHandle1);
+        
+        $fileDriver->forceReleaseLockByID(12345);
+        
+        $lockFileHandle2 = $fileDriver->acquireLock(12345, 10000, 1000);
+        //$fileInfo2 = new FileInfo($lockFileHandle2);
+        //Test that the previous lock is valid should fail.
+        $result = $fileDriver->validateLock(12345, $fileInfo1);
+        $this->assertFalse($result);
+    }
+    
 }
-
-/*
-    vfsStream setup.
-
-
-     * Assumed $structure contains an array like this:
-     * <code>
-     * array('Core' = array('AbstractFactory' => array('test.php'    => 'some text content',
-     *                                                 'other.php'   => 'Some more text content',
-     *                                                 'Invalid.csv' => 'Something else',
-     *                                           ),
-     *                      'AnEmptyFolder'   => array(),
-     *                      'badlocation.php' => 'some bad content',
-     *                )
-     * )
-     * </code>
-     * the resulting directory tree will look like this:
-     * <pre>
-     * root
-     * \- Core
-     *  |- badlocation.php
-     *  |- AbstractFactory
-     *  | |- test.php
-     *  | |- other.php
-     *  | \- Invalid.csv
-     *  \- AnEmptyFolder
-
-
-*/
