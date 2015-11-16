@@ -62,14 +62,6 @@ class SessionConfig
     /**
      * @return mixed
      */
-    public function getName()
-    {
-        return $this->sessionName;
-    }
-
-    /**
-     * @return mixed
-     */
     public function getLifetime()
     {
         return $this->lifetime;

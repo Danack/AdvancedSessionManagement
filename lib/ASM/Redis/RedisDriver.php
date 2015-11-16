@@ -111,30 +111,25 @@ END;
      * KEYS[1] == lock key
      * ARGV[1] == lock token
      * ARGV[2] == lock time in milliseconds.
+     * 
+     * If the token is correct - renew the session
+     * If there is no lock current - renewing the lock is fine
+     * Otherwise return error message.
      */
     const renewLockScript = <<< END
-if redis.call("get",KEYS[1]) == ARGV[1]
+local token = redis.call("get",KEYS[1])
+if (token == ARGV[1])
 then
     return redis.call("PSETEX",KEYS[1],ARGV[2],ARGV[1])
+elseif not token
+then
+    return "Lock token not found"
 else
-    return redis.error_reply("Lock lost")
+    return "Lock token not found"
 end
-
 END;
 
 
-    /* # if the value of key is the same as arg
-     * if redis.call("get",KEYS[1]) == ARGV[1]
-     * then
-     *     # return the result of deleting the key which is
-     *     # Integer reply: The number of keys that were removed.
-     *     return redis.call("del",KEYS[1])
-     * else
-     *     #return 0 
-     *     return 0
-     * 
-     *
-     */
     function __construct(
         RedisClient $redisClient,
         Serializer $serializer = null,
@@ -186,7 +181,6 @@ END;
         $currentProfiles = [];
         $data = [];
 
-        //TODO - this should never be needed?
         if (isset($fullData['profiles'])) {
             $currentProfiles = $fullData['profiles'];
         }
@@ -207,6 +201,7 @@ END;
             $sessionManager,
             $data,
             $currentProfiles,
+            true,
             $lockToken
         );
     }
@@ -234,7 +229,7 @@ END;
      */
     function createSession(SessionManager $sessionManager, $userProfile = null)
     {
-        $sessionLifeTime = $sessionManager->getLifetime();
+        $sessionLifeTime = $sessionManager->getSessionConfig()->getLifetime();
         $initialData = [];
         $profiles = [];
         if ($userProfile) {
@@ -265,6 +260,7 @@ END;
                     $sessionManager,
                     [],
                     $profiles,
+                    false,
                     $lockToken
                 );
             }
@@ -276,7 +272,7 @@ END;
 
         throw new AsmException(
             "Failed to createSession.",
-            \ASM\Driver::E_SESSION_ID_CLASS
+            AsmException::ID_CLASH
         );
     }
 
@@ -306,19 +302,16 @@ END;
 
         $dataKey = generateSessionDataKey($sessionID);
         $dataString = $this->serializer->serialize($data);
-        $this->redisClient->set(
+        $written = $this->redisClient->set(
             $dataKey,
             $dataString,
             'EX',
             $sessionLifeTime
         );
-    }
 
-    /**
-     *
-     */
-    function close()
-    {
+        if (!$written) {
+            throw new AsmException("Failed to save data", AsmException::IO_ERROR);
+        }
     }
 
 //
@@ -328,38 +321,32 @@ END;
 //    function destroyExpiredSessions() {
 //        // Nothing to do for redis driver as redis automatically clears dead keys
 //    }
-//
 
-//
-//    function isLocked($sessionID) {
-//        return (bool)($this->lockNumber);
-//    }
-//
-//    /**
-//     * @param $sessionID
-//     * @return bool
-//     */
-//    function validateLock($sessionID) {
-//        if (!$this->lockNumber) {
-//            return false;
-//        }
-//        
-//        $lockKey = generateLockKey($sessionID);
-//        $storedLockNumber = $this->redisClient->get($lockKey);
-//        
-//        if ($storedLockNumber === $this->lockNumber) {
-//            return true;
-//        }
-//
-//        return false;
-//    }
+    /**
+     * @param $sessionID
+     * @return bool
+     */
+    function validateLock($sessionID, $lockToken) {
+        if (!$lockToken) {
+            return false;
+        }
+        
+        $lockKey = generateLockKey($sessionID);
+        $storedLockNumber = $this->redisClient->get($lockKey);
+        
+        if ($storedLockNumber === $lockToken) {
+            return true;
+        }
+
+        return false;
+    }
 
 
     /**
      * @param $sessionID
      * @param $lockTimeMS
      * @param $acquireTimeoutMS
-     * @return string
+     * @return string LockToken
      * @throws FailedToAcquireLockException
      */
     function acquireLock($sessionID, $lockTimeMS, $acquireTimeoutMS)
@@ -402,11 +389,13 @@ END;
     {
         $lockKey = generateLockKey($sessionId);
         $result = $this->redisClient->eval(self::unlockScript, 1, $lockKey, $lockToken);
-        if ($result !== 1) {
-            throw new LostLockException(
-                "Releasing lock revealed lock had been lost."
-            );
-        }
+        
+        // TODO - should 
+//        if ($result !== 1) {
+//            throw new LostLockException(
+//                "Releasing lock revealed lock had been lost."
+//            );
+//        }
 
         return $result;
     }
@@ -426,7 +415,7 @@ END;
      * @param $lockToken
      * @param $lockTimeMS
      * @return mixed
-     * @throws AsmException
+     * @throws LostLockException
      */
     function renewLock($sessionID, $lockToken, $lockTimeMS)
     {
@@ -440,7 +429,7 @@ END;
         );
  
         if ($result != "OK") {
-            throw new AsmException("Failed to renew lock.");
+            throw new LostLockException("Failed to renew lock.");
         }
 
         return $result;

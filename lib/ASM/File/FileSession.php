@@ -9,9 +9,7 @@ use ASM\SessionManager;
 
 class FileSession implements Session
 {
-
     protected $sessionId;
-
 
     protected $data = null;
 
@@ -31,31 +29,46 @@ class FileSession implements Session
     protected $fileInfo;
 
     /**
+     * @var
+     */
+    protected $isActive;
+
+    /**
      * @param $sessionId
      * @param FileDriver $fileDriver
      * @param SessionManager $sessionManager
      * @param array $userProfiles
      * @param FileInfo $fileInfo
+     * @param bool $isActive
      */
-    function __construct(
+    public function __construct(
         $sessionId,
         $data, 
         FileDriver $fileDriver,
         SessionManager $sessionManager,
         array $userProfiles,
-        FileInfo $fileInfo)
-    {
+        FileInfo $fileInfo,
+        $isActive
+    ) {
         $this->sessionId = $sessionId;
         $this->data = $data;
         $this->fileDriver = $fileDriver;
         $this->sessionManager = $sessionManager;
         $this->userProfiles = $userProfiles;
         $this->fileInfo = $fileInfo;
+        $this->isActive = (bool)$isActive;
     }
 
-
-    function getHeaders($caching,
-                        $lastModifiedTime = null,
+    /**
+     * @param int $privacy
+     * @param null $lastModifiedTime
+     * @param null $path
+     * @param bool $domain
+     * @param bool $secure
+     * @param bool $httpOnly
+     * @return array
+     */
+    function getHeaders($privacy,
                         $path = null,
                         $domain = false,
                         $secure = false,
@@ -63,8 +76,7 @@ class FileSession implements Session
     {
         return $this->sessionManager->getHeaders(
             $this->sessionId,
-            $caching,
-            $lastModifiedTime,
+            $privacy,
             $domain,
             $path,
             $secure,
@@ -107,10 +119,11 @@ class FileSession implements Session
     function setData(array $data)
     {
         $this->data = $data;
+        $this->isActive = true;
     }
 
 
-    function &getData()
+    function getData()
     {
         return $this->data;
     }
@@ -172,6 +185,11 @@ class FileSession implements Session
         }
 
         return true;
+    }
+    
+    function isActive()
+    {
+        return $this->isActive;
     }
 }
 

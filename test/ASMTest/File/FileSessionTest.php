@@ -18,12 +18,23 @@ class FileSessionTest extends AbstractSessionTest
      */
     protected $injector;
 
-    private $randomSubdir = "subdir";
+    static private $randomSubdir = "subdir";
+    
+    public static function setUpBeforeClass()
+    {
+        self::$randomSubdir = "subdir".time()."_".rand(1000000, 10000000);
+    }
+    
     
     protected function setUp() {
         $this->injector = createProvider();
-        $this->randomSubdir = rand(1000000, 10000000);
         parent::setUp();
+        resetMockFunctions();
+    }
+    
+    protected function tearDown()
+    {
+        resetMockFunctions();
     }
 
     /**
@@ -31,7 +42,7 @@ class FileSessionTest extends AbstractSessionTest
      */
     public function getDriver(IdGenerator $idGenerator)
     {
-        $path = "./sessfiletest/subdir".$this->randomSubdir;
+        $path = __DIR__."/../../../tmp/sessfiletest/".self::$randomSubdir;
         @mkdir($path, 0755, true);
         return new \ASM\File\FileDriver(
             $path,

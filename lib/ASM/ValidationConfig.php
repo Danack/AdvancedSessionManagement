@@ -29,11 +29,12 @@ class ValidationConfig
      */
     private $lostLockCallable;
 
-    function __construct(callable $profileChanged = null,
-                         callable $zombieKeyAccessed = null,
-                         callable $invalidSessionAccessed = null,
-                         callable $lostLockCallable = null)
-    {
+    function __construct(
+        callable $profileChanged = null,
+        callable $zombieKeyAccessed = null,
+        callable $invalidSessionAccessed = null,
+        callable $lostLockCallable = null
+    ) {
         $this->profileChanged = $profileChanged;
         $this->zombieKeyAccessed = $zombieKeyAccessed;
         $this->invalidSessionAccessed = $invalidSessionAccessed;

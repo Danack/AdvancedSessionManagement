@@ -8,16 +8,14 @@ interface Session
 {
 
     /**
-     * @param $caching int one of the \ASM\SessionManager::CACHE_* constants
-     * @param null $lastModifiedTime
+     * @param $privacy int one of the \ASM\SessionManager::CACHE_* constants
      * @param null $path
      * @param bool $domain
      * @param bool $secure
      * @param bool $httpOnly
      * @return mixed
      */
-    function getHeaders($caching,
-                        $lastModifiedTime = null,
+    function getHeaders($privacy,
                         $path = null,
                         $domain = false,
                         $secure = false,
@@ -31,7 +29,7 @@ interface Session
     /**
      * @return array
      */
-    function &getData();
+    function getData();
 
     /**
      * @param array $data
@@ -81,8 +79,10 @@ interface Session
     /**
      * Acquire a lock for the session, or renew it if the session already
      * has a lock.
-     * @param $lockTimeMS
-     * @param $acquireTimeoutMS
+     * @param int $lockTimeMS - the amount of time the session is locked for once
+     * the lock is acquired.
+     * @param int $acquireTimeoutMS - the amount of time to wait to acquire the
+     * lock before giving up and throwing an exception.
      * @return mixed
      */
     function acquireLock($lockTimeMS, $acquireTimeoutMS);
@@ -90,13 +90,18 @@ interface Session
     /**
      * Renew the lock the session has on the data.
      * 
+     * If the lock has been broken by another process, an exception
+     * will be thrown, to prevent data loss through concurrent modification. 
+     * 
      * @param $milliseconds
      * @return mixed
+     * @throws AsmException
      */
     function renewLock($milliseconds);
 
     /**
      * Release the lock the session has on the data.
+     * TODO - should this throw an exception if the lock was already lost? 
      * @return mixed
      */
     function releaseLock();
@@ -107,6 +112,15 @@ interface Session
      */
     function forceReleaseLocks();
 
+    /**
+     * Is the session active or not? Sessions are active either if the client
+     * sent a session cookie to the server, or if some data has been written
+     * to the session.
+     * If sessions are not active, there is no need to send the session cookie
+     * to the client.
+     * @return bool
+     */
+    function isActive();
 
     /**
      * @param $dyingSessionID

@@ -5,10 +5,10 @@ namespace ASM\Tests;
 
 use ASM\SessionManager;
 use ASM\SessionConfig;
-
-
+use ASM\ValidationConfig;
+use ASMTest\Stub\NullDriver;
 use Predis\Client as RedisClient;
-
+use ASM\AsmException;
 
 class SessionManagerTest extends \PHPUnit_Framework_TestCase {
 
@@ -18,11 +18,6 @@ class SessionManagerTest extends \PHPUnit_Framework_TestCase {
     private $provider;
     
     private $sessionConfig;
-
-    private $redisConfig;
-    
-    private $redisOptions;
-
 
     /**
      * @internal param ValidationConfig $validationConfig
@@ -62,11 +57,6 @@ class SessionManagerTest extends \PHPUnit_Framework_TestCase {
             60
         );
 
-        $this->redisConfig = array(
-            "scheme" => "tcp",
-            "host" => '127.0.0.1',
-            "port" => 6379
-        );
 
         $this->redisOptions = getRedisOptions();
 
@@ -95,5 +85,94 @@ class SessionManagerTest extends \PHPUnit_Framework_TestCase {
     function testEmpty() {
 
     }
+    
+    
+    function testOpenSessionFromCookieNoData()
+    {
+        $sessionManager = new SessionManager($this->sessionConfig, new NullDriver());
+        $session = $sessionManager->openSessionFromCookie([]);
+        $this->assertNull($session);
+    }
+    
+        
+    function testBadUserProfileComprison()
+    {
+        $sessionManager = new SessionManager($this->sessionConfig, new NullDriver());
+        $this->setExpectedException(
+            'ASM\AsmException',
+            '',
+            AsmException::BAD_ARGUMENT
+        );
+        $sessionManager->performProfileSecurityCheck(
+            new \StdClass,
+            []
+        );
+    }
+    
+
+    function testUserProfileChangedCoverage()
+    {
+        $sessionManager = new SessionManager(
+            $this->sessionConfig,
+            new NullDriver()
+        );
+        $existingProfiles = ["ExistingProfile"];
+        $returnValue = $sessionManager->performProfileSecurityCheck(
+            'NewUAProfile',
+            $existingProfiles
+        );
+
+        $this->assertEquals($existingProfiles, $returnValue);
+    }
+    
+    function testUserProfileChangedCoverage2()
+    {
+        $fn = function () {
+
+        };
+        $validationConfig = new ValidationConfig(
+            $fn
+        );
+        $sessionManager = new SessionManager(
+            $this->sessionConfig,
+            new NullDriver(),
+            $validationConfig
+        );
+        $existingProfiles = ["ExistingProfile"];
+        $returnValue = $sessionManager->performProfileSecurityCheck(
+            'ExistingProfile',
+            $existingProfiles
+        );
+
+        $this->assertEquals($existingProfiles, $returnValue);
+    }
+    
+    function testUserProfileChangedBadCallable()
+    {
+        $fn = function () {
+            return 4;
+        };
+        $validationConfig = new ValidationConfig(
+            $fn
+        );
+        $sessionManager = new SessionManager(
+            $this->sessionConfig,
+            new NullDriver(),
+            $validationConfig
+        );
+        $existingProfiles = ["ExistingProfile"];
+        
+        $this->setExpectedException(
+            'ASM\AsmException',
+            '',
+            AsmException::BAD_ARGUMENT
+        );
+        $returnValue = $sessionManager->performProfileSecurityCheck(
+            'NewUAProfile',
+            $existingProfiles
+        );
+    }
+    
+    
     
 }

@@ -12,7 +12,6 @@ class SessionManager
     const CACHE_SKIP = 'skip';
     const CACHE_PUBLIC = 'public';
     const CACHE_PRIVATE = 'private';
-    const CACHE_PRIVATE_NO_EXPIRE = 'private_no_expire';
     const CACHE_NO_CACHE = 'nocache';
 
     /**
@@ -66,22 +65,6 @@ class SessionManager
         return $this->sessionConfig->getLockMode();
     }
 
-    /**
-     * @return mixed
-     */
-    function getName()
-    {
-        return $this->sessionConfig->getName();
-    }
-
-    /**
-     * @return mixed
-     */
-    function getLifetime()
-    {
-        return $this->sessionConfig->getLifetime();
-    }
-
     public function openSessionFromCookie(array $cookieData, $userProfile = null)
     {
         if (!array_key_exists($this->sessionConfig->getSessionName(), $cookieData)) {
@@ -92,6 +75,7 @@ class SessionManager
 
         return $this->openSessionByID($sessionID, $userProfile);
     }
+
     /**
      * Opens an existing session.
      *
@@ -108,17 +92,12 @@ class SessionManager
             $sessionID,
             $this,
             $userProfile
-            //TODO - lock mode should be here.
         );
 
         if ($session == null) {
             $this->invalidSessionAccessed();
             return null;
         }
-
-//        if ($this->sessionConfig->getLockMode() == SessionConfig::LOCK_ON_OPEN) {
-//            $this->acquireLock();
-//        }
 
         return $session;
     }
@@ -324,14 +303,18 @@ class SessionManager
      * @return mixed|null
      * @throws AsmException
      */
-    function performProfileSecurityCheck($newProfile, $existingProfiles) {
+    function performProfileSecurityCheck($newProfile, $existingProfiles)
+    {
         if ($newProfile === null) {
             return $existingProfiles;
         }
 
         if (is_string($newProfile) == false &&
             (!(is_object($newProfile) && method_exists($newProfile, '__toString')))) {
-            throw new AsmException("userProfile must be a string or an object containing a __toString method.");
+            throw new AsmException(
+                "userProfile must be a string or an object containing a __toString method.",
+                AsmException::BAD_ARGUMENT
+            );
         }
 
         $profileChangedCallable = $this->validationConfig->getProfileChangedCallable();
@@ -348,7 +331,10 @@ class SessionManager
         $newProfiles = call_user_func($profileChangedCallable, $this, $newProfile, $existingProfiles);
         
         if (is_array($newProfiles) == false) {
-            throw new AsmException("The profileChangedCallable must return an array of the allowed session profiles, but instead a ".gettype($newProfiles)."was returned");
+            throw new AsmException(
+                "The profileChangedCallable must return an array of the allowed session profiles, but instead a ".gettype($newProfiles)."was returned",
+                AsmException::BAD_ARGUMENT
+            );
         }
 
         return $newProfiles;
@@ -379,7 +365,7 @@ class SessionManager
 
     /**
      * @param $sessionId
-     * @param $caching
+     * @param $privacy
      * @param $lastModifiedTime
      * @param $domain
      * @param $path
@@ -390,8 +376,7 @@ class SessionManager
      */
     function getHeaders(
         $sessionId, 
-        $caching,
-        $lastModifiedTime,
+        $privacy,
         $domain,
         $path,
         $secure,
@@ -400,21 +385,18 @@ class SessionManager
         $time = time();
 
         $headers = [];
-        $headers["Set-Cookie"] = ASM::generateCookieHeader($time,
-            $this->getName(),
+        $headers["Set-Cookie"] = ASM::generateCookieHeaderString($time,
+            $this->sessionConfig->getSessionName(),
             $sessionId,
-            $this->getLifetime(),
+            $this->sessionConfig->getLifetime(),
             $path,
             $domain,
             $secure,
             $httpOnly);
 
-        $expireTime = $time + $this->getLifetime();
 
-        $cachingHeaders = ASM::getCacheHeaders(
-            $caching,
-            $expireTime,
-            $lastModifiedTime
+        $cachingHeaders = ASM::getCacheControlPrivacyHeader(
+            $privacy
         );
 
         $headers = array_merge($headers, $cachingHeaders);

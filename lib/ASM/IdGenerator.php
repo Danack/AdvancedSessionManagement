@@ -1,8 +1,6 @@
 <?php
 
-
 namespace ASM;
-
 
 interface IdGenerator
 {

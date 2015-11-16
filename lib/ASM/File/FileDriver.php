@@ -13,6 +13,13 @@ use ASM\LostLockException;
 use ASM\Session;
 use ASM\Serializer\JsonSerializer;
 
+/**
+ * Class FileDriver
+ * @package ASM\File
+ * 
+ * This uses the modified time 
+ * 
+ */
 class FileDriver implements Driver
 {
     const DATA_FILE = 'data_file';
@@ -20,7 +27,6 @@ class FileDriver implements Driver
     const ZOMBIE_FILE = 'zombie_file';
 
     private $path;
-
 
     /**
      * @var Serializer
@@ -102,7 +108,15 @@ class FileDriver implements Driver
         
         $fileInfo = new FileInfo($lockFileHandle);
 
-        return new FileSession($sessionId, $data, $this, $sessionManager, $existingProfiles, $fileInfo);
+        return new FileSession(
+            $sessionId,
+            $data,
+            $this,
+            $sessionManager,
+            $existingProfiles,
+            $fileInfo,
+            true
+        );
     }
 
     /**
@@ -134,7 +148,15 @@ class FileDriver implements Driver
         $this->save($sessionId, [], $existingProfiles,  $fileInfo);
         // fclose($fileHandle); umm.
 
-        return new FileSession($sessionId, [], $this, $sessionManager, $existingProfiles, $fileInfo);
+        return new FileSession(
+            $sessionId, 
+            [],
+            $this,
+            $sessionManager,
+            $existingProfiles,
+            $fileInfo,
+            false
+        );
     }
 
     /**
@@ -149,7 +171,8 @@ class FileDriver implements Driver
             $sessionId = $this->idGenerator->generateSessionID();
             $filename = $this->generateFilenameForDataFile($sessionId);
             //TODO remove? - the user should create the directory themselves
-            @mkdir(dirname($filename));
+            $dirname = dirname($filename);
+            @mkdir($dirname);
             //This only succeeds if the file doesn't already exist
             $fileHandle = @fopen($filename, 'x+');
             if ($fileHandle != false) {
@@ -157,7 +180,10 @@ class FileDriver implements Driver
             }
         };
 
-        throw new AsmException("Failed to open a new session file with random name.");
+        throw new AsmException(
+            "Failed to open a new session file with random name.",
+            AsmException::ID_CLASH
+        );
     }
 
     /**
@@ -266,18 +292,10 @@ class FileDriver implements Driver
     }
 
     /**
-     * Test whether the driver thinks the data is locked. The result may
-     * not be accurate when another process has force released the lock.
-     * @param $sessionID
-     * @return boolean
-     */
-//    function isLocked($sessionID) {
-//        return (bool)($this->fileHandle);
-//    }
-
-    /**
      * @param $sessionId
-     * @return boolean
+     * @param FileInfo $fileInfo
+     * @return bool
+     * @throws AsmException
      */
     function validateLock($sessionId, FileInfo $fileInfo)
     {
@@ -290,7 +308,7 @@ class FileDriver implements Driver
         }
 
         $originalStat = fstat($fileInfo->lockFileHandle);
-        if(array_key_exists('ino', $originalStat)) {
+        if($originalStat && array_key_exists('ino', $originalStat)) {
             $originalInode = $originalStat['ino'];
         }
 
@@ -316,10 +334,6 @@ class FileDriver implements Driver
             );
         }
 
-        $now = microtime();
-        //TODO - Check if lock has timed out.
-        //TODO - do we really want this?
-
         return true;
     }
 
@@ -342,7 +356,7 @@ class FileDriver implements Driver
 //
 //        return $fileContents;
 //    }
-//
+
 //    /**
 //     * @param $dyingSessionID
 //     * @param $newSessionID
@@ -401,24 +415,49 @@ class FileDriver implements Driver
     public function acquireLock($sessionId, $lockTimeMS, $acquireTimeoutMS)
     {
         // Get the time in MS
-        $currentTimeInMS = (int)(microtime(true) * 1000);
-        $giveUpTime = $currentTimeInMS + $acquireTimeoutMS;
+        $currentTime = microtime(true);
+        $giveUpTime = $currentTime + ($acquireTimeoutMS * 0.001);
 
         $lockFilename = $this->generateFilenameForLockFile($sessionId); 
 
         do {
-            //Re-open the lock file, to prevent issues where another process
-            //deletes it.
+            //Re-open the lock file every loop, to prevent issues where another
+            //process deletes it.
             $fileHandle = fopen($lockFilename, 'c+');
+            //'c+' means "Open the file for writing only. If the file does not exist,
+            // it is created. If it exists, it is neither truncated (as opposed to 'w'),
+            // nor the call to this function fails (as is the case with 'x').
             $locked = flock($fileHandle, LOCK_EX|LOCK_NB);
             if ($locked) {
-                $touchTime = time() + intval(ceil($lockTimeMS / 1000));
-                touch($lockFilename, $touchTime);
-
+                //$touchTime = time() + intval(ceil($lockTimeMS / 1000));
+                $expireTime = microtime(true) + ($lockTimeMS * 0.0001);
+                file_put_contents(
+                    $lockFilename,
+                    sprintf("%f", $expireTime)
+                );
+                //touch($lockFilename, $touchTime);
                 return $fileHandle;
             }
-            usleep(1000); // sleep 1ms to avoid churning CPU
-        } while($giveUpTime > ((int)(microtime(true) * 1000)));
+            
+            //We did not acquire a lock - check to see if the lock has expired            
+            $contents = file_get_contents($lockFilename);
+            $existingExpireTime = floatval($contents);
+            // TODO - we could do a basic sanity test on the lock data
+            // however, what we be the correct action to take?
+//            if ($existingExpireTime < 1447040641 ||
+//                $existingExpireTime > 2551578313) {
+//                //lock contents are rubbish
+//                //TODO - decide what to do.
+//            }
+
+            if (microtime(true) > $existingExpireTime) {
+                unlink($lockFilename);
+            }
+            else {
+                // sleep 1ms to avoid churning CPU
+                usleep(1000);
+            }
+        } while($giveUpTime > microtime(true));
 
         throw new FailedToAcquireLockException(
             "FileDriver failed to acquire lock."
@@ -431,9 +470,14 @@ class FileDriver implements Driver
      * @return mixed
      */
     public function renewLock($sessionId, $milliseconds, FileInfo $fileInfo) {
+        
+        //Write the new expire time to the existing lock handle
+        
         if (!$this->validateLock($sessionId, $fileInfo)) {
             throw new LostLockException("Cannot renew lock, it has already been released.");
         }
+
+        //$this->acquireLock($sessionId, $lockTimeMS, $acquireTimeoutMS)
         
         // TODO - there is a race condition here between
         $filename = $this->generateFilenameForDataFile($sessionId);

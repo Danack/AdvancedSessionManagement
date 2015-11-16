@@ -22,8 +22,7 @@
     "autoload": {
         "psr-0": {
             "ASM": "lib/"
-        },
-        "files": ["lib/ASM/Functions.php"]
+        }
     },
     "autoload-dev": {
         "psr-0": {

@@ -11,6 +11,7 @@ namespace ASM;
 class AsmException extends \Exception
 {
     const IO_ERROR = 1;
-    
+    const BAD_ARGUMENT = 2;
+    const ID_CLASH = 3;
 }
 

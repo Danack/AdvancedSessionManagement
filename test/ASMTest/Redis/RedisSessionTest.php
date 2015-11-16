@@ -9,7 +9,7 @@ use ASM\IdGenerator;
 
 /**
  * Class FileSessionTest
- * 
+ *
  */
 class RedisSessionTest extends AbstractSessionTest
 {
@@ -25,6 +25,8 @@ class RedisSessionTest extends AbstractSessionTest
 
         return $this->injector->make('\ASM\Redis\RedisDriver');
     }
+    
+    
     
 //            $this->redisConfig = array(
 //            "scheme" => "tcp",

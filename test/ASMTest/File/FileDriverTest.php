@@ -4,9 +4,6 @@
 namespace ASMTest\Tests\File;
 
 use org\bovigo\vfs\vfsStream;
-use org\bovigo\vfs\vfsStreamDirectory;
-
-
 use ASM\Serializer\PHPSerializer;
 use ASM\IdGenerator\RandomLibIdGenerator;
 use ASMTest\Tests\AbstractDriverTest;
@@ -24,11 +21,15 @@ class FileDriverTest extends AbstractDriverTest
      */
     protected $injector;
     
-    private $randomSubdir = "subdir";
+    static private $randomSubdir = "subdir";
 
+    public static function setUpBeforeClass()
+    {
+        self::$randomSubdir = "subdir".time()."_".rand(1000000, 10000000);
+    }
+    
     protected function setUp() {
         $this->injector = createProvider();
-        $this->randomSubdir = rand(1000000, 10000000);
         resetMockFunctions();
     }
     
@@ -42,28 +43,12 @@ class FileDriverTest extends AbstractDriverTest
      */
     function getDriver()
     {
-// vfsStream does not implement inodes. The File session Driver depends on 
-// inodes to implement locking, and so it cannot be used for testing.
-//        vfsStream::setup('sessionTest');
-//        $path = vfsStream::url('sessionTest');
-//        // this is showing errors
-//        //return $this->injector->make('ASM\Driver\FileDriver', [':path' => $path]);
-        $path = "./sessfiletest/subdir".$this->randomSubdir;
+        // vfsStream does not implement inodes. The File session Driver depends on 
+        // inodes to implement locking, and so it cannot be used for testing.
+        $path = __DIR__."/../../../tmp/sessfiletest/subdir".self::$randomSubdir;
         @mkdir($path, 0755, true);
 
         return $this->injector->make('ASM\File\FileDriver', [':path' => $path]);
-    }
-
-    /**
-     * @return \ASM\File\FileDriver
-     */
-    public function createDriver()
-    {
-        return $this->getDriver();
-
-//        $vfsStreamDirectory = vfsStream::setup('sessionTest');        
-//        $fileDriver = $this->injector->make('ASM\File\FileDriver', [':path' => $path]);
-//        return $fileDriver; 
     }
 
     /**
@@ -86,7 +71,7 @@ class FileDriverTest extends AbstractDriverTest
         $serializer = new PHPSerializer();
         $idGenerator = new RandomLibIdGenerator();
 
-        $path = "./sessfiletest/subdir".rand(1000000, 10000000);
+        $path = __DIR__."./../../../tmp/sessfiletest/subdir".self::$randomSubdir;
         @mkdir($path, 0755, true);
 
         $this->injector->alias('ASM\Serializer', get_class($serializer));
@@ -103,11 +88,12 @@ class FileDriverTest extends AbstractDriverTest
      */
     function testUnwriteable()
     {
-        $vfsStreamDirectory = vfsStream::newDirectory('sessionTest', 0);        
-        $path = $vfsStreamDirectory->url();
-        $fileDriver = $this->injector->make('ASM\File\FileDriver', [':path' => $path]);
-
+        $fileDriver = $this->getDriver();
         $sessionManager = createSessionManager($fileDriver);
+        $fn = function () {
+            return false;
+        };
+        mock('fopen', $fn);
         $this->setExpectedException('ASM\AsmException');
         $fileDriver->createSession($sessionManager);
     }
@@ -118,7 +104,7 @@ class FileDriverTest extends AbstractDriverTest
      */
     function testFilePutContentsFail()
     {
-        $vfsStreamDirectory = vfsStream::newDirectory('sessionTest', 0);        
+        $vfsStreamDirectory = vfsStream::newDirectory('sessionTestVFS', 0);        
         $path = $vfsStreamDirectory->url();
         $fileDriver = $this->injector->make('ASM\File\FileDriver', [':path' => $path]);
         $fileInfo = new FileInfo(null);
@@ -142,6 +128,7 @@ class FileDriverTest extends AbstractDriverTest
         mock('rename', function() {return false;});
         $this->setExpectedException(
             'ASM\AsmException',
+            '',
             AsmException::IO_ERROR
         );
         $fileDriver->save(
@@ -177,6 +164,7 @@ class FileDriverTest extends AbstractDriverTest
 
        $this->setExpectedException(
            'ASM\AsmException',
+           '',
            AsmException::IO_ERROR
        );
        
@@ -225,11 +213,7 @@ class FileDriverTest extends AbstractDriverTest
         
         $lockFileHandle1 = $fileDriver->acquireLock(12345, 10000, 1000);
         $fileInfo1 = new FileInfo($lockFileHandle1);
-        
         $fileDriver->forceReleaseLockByID(12345);
-        
-        $lockFileHandle2 = $fileDriver->acquireLock(12345, 10000, 1000);
-        //$fileInfo2 = new FileInfo($lockFileHandle2);
         //Test that the previous lock is valid should fail.
         $result = $fileDriver->validateLock(12345, $fileInfo1);
         $this->assertFalse($result);

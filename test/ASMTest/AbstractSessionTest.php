@@ -3,17 +3,16 @@
 
 namespace ASMTest\Tests;
 
+use ASM\LostLockException;
 use ASM\SessionManager;
 use ASM\SessionConfig;
 use ASM\Profile\SimpleProfile;
 use ASM\ValidationConfig;
-
 use Predis\Client as RedisClient;
-use ASM\Redis\RedisDriver;
-use ASM\Serializer\JsonSerializer;
 use ASM\FailedToAcquireLockException;
 use ASM\IdGenerator;
 use ASM\IdGenerator\RandomLibIdGenerator;
+use ASM\AsmException;
 
 abstract class AbstractSessionTest extends \PHPUnit_Framework_TestCase {
 
@@ -49,15 +48,8 @@ abstract class AbstractSessionTest extends \PHPUnit_Framework_TestCase {
         ValidationConfig $validationConfig = null,
         SimpleProfile $sessionProfile = null
     ) {
-//        $redisClient = new RedisClient($this->redisConfig, $this->redisOptions);
-//        checkClient($redisClient, $this);
-//        $serializer = new JsonSerializer();
-//        $redisDriver = new RedisDriver($redisClient, $serializer);
-        
         $idGenerator = new RandomLibIdGenerator();
-        
         $driver = $this->getDriver($idGenerator);
-        
         $config = clone $this->sessionConfig;
         if ($lockMode != null) {
             $config->lockMode = $lockMode;
@@ -72,21 +64,8 @@ abstract class AbstractSessionTest extends \PHPUnit_Framework_TestCase {
         return $sessionManager;
     }
 
-
-//    function createSecondSession(Session $session1, ValidationConfig $validationConfig = null,SimpleProfile $sessionProfile = null) {
-//        $cookie = extractCookie($session1->getHeader());
-//        $this->assertNotNull($cookie);
-//        $redisClient2 = new RedisClient($this->redisConfig, $this->redisOptions);
-//        $mockCookies2 = array_merge(array(), $cookie);
-//        $session2 = new Session($this->sessionConfig, Session::READ_ONLY, $mockCookies2, $redisClient2, $validationConfig, $sessionProfile);
-//
-//        $session2->start();
-//
-//        return $session2;
-//    }
-
-
-    protected function setUp() {
+    protected function setUp()
+    {
         $this->injector = createProvider();
         
         $this->sessionConfig = new SessionConfig(
@@ -98,15 +77,6 @@ abstract class AbstractSessionTest extends \PHPUnit_Framework_TestCase {
             100
         );
     }
-    
-//    function getFileDriver()
-//    {
-//        $path = "./sesstest/subdir".rand(1000000, 10000000);
-//        @mkdir($path, 0755, true);
-//
-//        return $this->injector->make('ASM\Driver\FileDriver', [':path' => $path]);
-//
-//    }
 
     function testInvalidSessionAccess()
     {
@@ -144,15 +114,20 @@ abstract class AbstractSessionTest extends \PHPUnit_Framework_TestCase {
 
     /**
      * Create a session then open it with open.
-     * @group debugging
      */
     function testCreateSessionThenReopenThroughCookie()
     {
         $cookieData = [];
         $sessionManager = $this->createSessionManager();
         $newSession = $sessionManager->createSession($cookieData);
-        $srcData = ['foo' => 'bar'];
+        $srcData = ['foo' => 'bar'.rand(1000000, 1000000)];
+        
+        //Sessions are inactive by default.
+        $this->assertFalse($newSession->isActive());
+        
         $newSession->setData($srcData);
+        //Sessions are active after having data set.
+        $this->assertTrue($newSession->isActive());
         $newSession->save();
         $sessionID = $newSession->getSessionId();
         $newSession->close();
@@ -166,6 +141,8 @@ abstract class AbstractSessionTest extends \PHPUnit_Framework_TestCase {
         $this->assertInstanceOf('ASM\Session', $reopenedSession);
         $dataLoaded = $reopenedSession->getData();
         $this->assertEquals($srcData, $dataLoaded);
+        
+        $this->assertTrue($reopenedSession->isActive());
     }
     
 
@@ -187,9 +164,40 @@ abstract class AbstractSessionTest extends \PHPUnit_Framework_TestCase {
 
         $sessionManager2 = $this->createSessionManager();
         $reopenedSession = $sessionManager2->createSession($cookieData);
+        $this->assertNotNull($reopenedSession, "Failed to re-open session");
+        
+        $dataRead = $reopenedSession->getData();
+        $this->assertEquals($srcData, $dataRead);
         $this->assertInstanceOf('ASM\Session', $reopenedSession);
     }
 
+    
+//        // Create a session then reopen it with createSession
+//    function testCreateSessionThenRecreateWithArrayReference()
+//    {
+//        $cookieData = [];
+//        $sessionManager = $this->createSessionManager();
+//        $newSession = $sessionManager->createSession($cookieData);
+//        $srcData = &$newSession->getData();
+//        $this->assertEmpty($srcData, "newly created session isn't empty.");
+//        $srcData['foo'] = 'bar'.rand(1000000, 1000000);
+//        $newSession->save();
+//        $sessionID = $newSession->getSessionId();
+//        $newSession->close();
+//
+//        $cookieData = [
+//            $this->sessionName => $sessionID
+//        ];
+//
+//        $sessionManager2 = $this->createSessionManager();
+//        $reopenedSession = $sessionManager2->createSession($cookieData);
+//        $dataRead = $reopenedSession->getData();
+//        $this->assertEquals($srcData, $dataRead);
+//        $this->assertInstanceOf('ASM\Session', $reopenedSession);
+//    }
+//    
+    
+    
 
     // Create a session, delete it, then attempt to re-open
     function testCreateSessionDeleteThenReopen()
@@ -237,47 +245,7 @@ abstract class AbstractSessionTest extends \PHPUnit_Framework_TestCase {
         $reopenedSession = $sessionManager2->openSessionFromCookie($cookieData);
         $this->assertNull($reopenedSession);
     }
-    
-    
-    
-    
 
-
-//    function testLock() {
-//        $session = $this->createEmptySession();
-//        $session->acquireLock();
-//        $lockReleased = $session->releaseLock();
-//        $this->assertTrue($lockReleased, "Failed to confirm lock was released.");
-//    }
-
-//    function testForceReleaseLock() {
-//        $session1 = $this->createEmptySession();
-//        $session1->acquireLock();
-//
-//        $cookie = extractCookie($session1->getHeader());
-//        $this->assertNotNull($cookie);
-//        $redisClient2 = new RedisClient($this->redisConfig, $this->redisOptions);
-//        $mockCookies2 = array_merge(array(), $cookie);
-//
-//        $sessionConfig = new SessionConfig(
-//            'SessionTest',
-//            1000,
-//            60,
-//            SessionConfig::LOCK_ON_WRITE
-//        );
-//        
-//        $session2 = new Session($sessionConfig, Session::READ_ONLY, $mockCookies2, $redisClient2);
-//
-//        $session2->forceReleaseLock();
-//        
-//        $session2->start();
-//        
-//        
-//        $this->assertEquals($session2->getSessionID(), $session1->getSessionID(), "Failed to re-open session with cookie.");
-//
-//        $lockReleased = $session1->releaseLock();
-//        $this->assertFalse($lockReleased, "Lock was not force released by second session.");
-//    }
 
 
     
@@ -339,11 +307,8 @@ abstract class AbstractSessionTest extends \PHPUnit_Framework_TestCase {
 
         //This generator always return the same ID.
         $idGenerator = new \ASMTest\Stub\XKCDIDGenerator();
-        $redisDriver = new RedisDriver(
-            $redisClient,
-            null,
-            $idGenerator
-        );
+        
+        $driver = $this->getDriver($idGenerator);
 
         $sessionConfig = new SessionConfig(
             $this->sessionName,
@@ -354,20 +319,19 @@ abstract class AbstractSessionTest extends \PHPUnit_Framework_TestCase {
             100
         );
 
-        
-        $sessionLoader = new SessionManager(
+        $sessionManager = new SessionManager(
             $sessionConfig,
-            $redisDriver
-        );
-        
-        $this->setExpectedException(
-            'ASM\AsmException',
-            null,
-            \ASM\Driver::E_SESSION_ID_CLASS
+            $driver
         );
 
-        $session1 = $sessionLoader->createSession([]);
-        $session2 = $sessionLoader->createSession([]);
+        $session1 = $sessionManager->createSession([]);
+
+        $this->setExpectedException(
+            'ASM\AsmException',
+            '',
+            AsmException::ID_CLASH
+        );
+        $session2 = $sessionManager->createSession([]);
     }
 
 
@@ -446,8 +410,9 @@ abstract class AbstractSessionTest extends \PHPUnit_Framework_TestCase {
         $session1 = $sessionManager1->createSession([]);
         $sessionManager2 = $this->createSessionManager(\ASM\SessionConfig::LOCK_MANUALLY);
         $session2 = $sessionManager2->openSessionByID($session1->getSessionId());
+        $this->assertNotNull($session2, "Failed to re-open session");
         $session2->forceReleaseLocks();
-        $this->setExpectedException('ASM\LostLockException');
+        $this->setExpectedException('Asm\LostLockException');
         $session1->renewLock(1000);
     }
 
@@ -457,11 +422,11 @@ abstract class AbstractSessionTest extends \PHPUnit_Framework_TestCase {
         $session1 = $sessionManager1->createSession([]);
         $sessionManager2 = $this->createSessionManager(\ASM\SessionConfig::LOCK_MANUALLY);
         $session2 = $sessionManager2->openSessionByID($session1->getSessionId());
+        $this->assertNotNull($session2, "Failed to re-open session");
         $session2->forceReleaseLocks();
-        
+
         $validLock = $session1->validateLock();
     }
-    
 
     function testLockException()
     {
@@ -491,6 +456,54 @@ abstract class AbstractSessionTest extends \PHPUnit_Framework_TestCase {
         $isLocked = $session->isLocked();
         $this->assertTrue($isLocked);
     }
+    
+    
+    function testLockExpiresAndSecondSessionClaimsLock()
+    {
+        $sessionConfig = new SessionConfig(
+            $this->sessionName,
+            1000,
+            60,
+            $lockMode = SessionConfig::LOCK_MANUALLY,
+            $lockTimeInMilliseconds = 2000,
+            100
+        );
+        
+        $idGenerator = new RandomLibIdGenerator();
+        $driver = $this->getDriver($idGenerator);
+        $sessionManager1 = new SessionManager(
+            $sessionConfig,
+            $driver
+        );
+
+        $session1 = $sessionManager1->createSession([]);
+
+        $session2 = $sessionManager1->openSessionByID($session1->getSessionId());
+        $session1->acquireLock(2000, 200);
+        $session2->forceReleaseLocks();
+        $session2->acquireLock(2000, 50);//This requires IO to not take 50ms...
+        $this->setExpectedException('ASM\LostLockException');
+        $session1->renewLock(1000);
+    }
+    
+    
+    function testGetHeaders()
+    {
+        $sessionManager1 = $this->createSessionManager();
+        $session1 = $sessionManager1->createSession([]);
+        $headers = $session1->getHeaders(SessionManager::CACHE_PRIVATE);
+
+        $this->assertArrayHasKey('Set-Cookie', $headers);
+//        $this->assertRegExp(
+//            '#TestSession=\w; expires=.* UTC; Max-Age=1000; httpOnly#',
+//            $headers['Set-Cookie']
+//        );
+        $this->assertArrayHasKey('Cache-Control', $headers);
+        $this->assertEquals("private", $headers['Cache-Control']);
+    }
+    
+    
+    
     
     //$session->getHeaders();
 //delete

@@ -23,9 +23,15 @@ function getRedisConfig()
 
 function getRedisOptions()
 {
+    static $unique = null;
+
+    if ($unique == null) {
+        $unique = date("Ymdhis").uniqid();
+    }
+
     $redisOptions = array(
         'profile' => '2.6',
-        'prefix' => 'sessionTest'.date("Ymdhis").uniqid().':',
+        'prefix' => 'sessionTest'.$unique.':',
     );
 
     return $redisOptions;
@@ -74,8 +80,8 @@ function createSessionManager(ASM\Driver $driver)
         3600,
         10,
         $lockMode = ASM\SessionConfig::LOCK_ON_OPEN,
-        $lockTimeInMilliseconds = 5000,
-        $maxLockWaitTimeMilliseconds = 300
+        $lockTimeInMilliseconds = 50000,
+        $maxLockWaitTimeMilliseconds = 1000
     );
 
     return new ASM\SessionManager($sessionConfig, $driver);
@@ -152,12 +158,13 @@ function checkClient($redisClient, \PHPUnit_Framework_TestCase $test)
 {
     try {
         /** @var $redisClient \Predis\Client */
-        $result = $redisClient->ping("Shamoan");
-        if ($result != "Shamoan") {
+        $result = $redisClient->ping();
+        if ($result != "PONG") {
             throw new \Exception("Redis ping is broken");
         }
     }
     catch (\Exception $e) {
+        echo "exception :".$e->getMessage()."\n";
         $test->markTestSkipped("Redis unavailable");
     }
 }

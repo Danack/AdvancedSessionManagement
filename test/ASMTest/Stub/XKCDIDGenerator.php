@@ -2,8 +2,10 @@
 
 namespace ASMTest\Stub;
 
-class XKCDIDGenerator implements \ASM\IdGenerator {
+use ASM\IdGenerator;
 
+class XKCDIDGenerator implements IdGenerator
+{
     function generateSessionId()
     {
         return "4";

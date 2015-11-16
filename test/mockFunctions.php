@@ -83,6 +83,29 @@ namespace ASM\File {
 
         return \fstat($filehandle);
     }
+
+
+    function fopen($filename, $mode, $use_include_path = false, $context = null)
+    {
+        global $mockFunctions;
+
+        if (array_key_exists('fopen', $mockFunctions) == true) {
+            $fn = $mockFunctions['fopen'];
+
+            return $fn(
+                $filename,
+                $mode,
+                $use_include_path,
+                $context
+            );
+        }
+
+        if ($context !== null) {
+            return \fopen($filename, $mode, $use_include_path, $context);
+        }
+
+        return \fopen($filename, $mode, $use_include_path);
+    }
 }
 
 namespace ASM\Redis {

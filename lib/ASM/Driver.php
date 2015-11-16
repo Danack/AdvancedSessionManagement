@@ -6,8 +6,8 @@ namespace ASM;
 
 /**
  * Interface Driver
- * This interface is only called by SessionManager. Each session implementation
- * is free to have the other functionality as needed.
+ * This interface is called by the SessionManager. Each session implementation
+ * is free to have other functionality as needed.
  * @package ASM
  */
 interface Driver
@@ -51,8 +51,6 @@ interface Driver
      */
     function forceReleaseLockByID($sessionID);
 
-    //function releaseLock($sessionID, $lockToken);
-    //function acquireLock($sessionID, $lockTimeMS, $acquireTimeoutMS);
     //function findSessionIDFromZombieID($zombieSsessionID);
 }
 
