@@ -3,7 +3,6 @@
 
 namespace ASM\File;
 
-
 use ASM\Session;
 use ASM\SessionManager;
 
@@ -186,10 +185,39 @@ class FileSession implements Session
 
         return true;
     }
-    
+
+    /**
+     * Return whether this session is 'active'. A session is active if it was 
+     * initialized because a user sent us an session cookie, or if data has been
+     * written to to.
+     * @return bool
+     */
     function isActive()
     {
         return $this->isActive;
+    }
+    
+    
+    function setSessionVariable($name, $value)
+    {
+        $this->data[$name] = $value;
+        $this->isActive = true;
+    }
+
+    function getSessionVariable($name, $default = false, $clear = false)
+    {
+        if (array_key_exists($name, $this->data) == false) {
+            return $default;
+        }
+
+        $value = $this->data[$name];
+
+        if ($clear) {
+            unset($this->data[$name]);
+            $this->isActive = true;
+        }
+
+        return $value;
     }
 }
 

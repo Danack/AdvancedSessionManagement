@@ -135,5 +135,8 @@ interface Session
      * @return mixed
      */
     //function findSessionIDFromZombieID($zombieSsessionID);
+    
+    function setSessionVariable($name, $value);
+    function getSessionVariable($name, $default = false, $clear = false);
 }
 
