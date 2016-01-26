@@ -262,7 +262,27 @@ class RedisSession implements Session
         $this->redisDriver->forceReleaseLockByID($this->sessionId);
     }
 
+    function setSessionVariable($name, $value)
+    {
+        $this->data[$name] = $value;
+        $this->isActive = true;
+    }
 
+    function getSessionVariable($name, $default = false, $clear = false)
+    {
+        if (array_key_exists($name, $this->data) == false) {
+            return $default;
+        }
+
+        $value = $this->data[$name];
+
+        if ($clear) {
+            unset($this->data[$name]);
+            $this->isActive = true;
+        }
+
+        return $value;
+    }
 }
 
 

@@ -11,9 +11,12 @@ class SessionFilePath
 
     public function __construct($path)
     {
-        if ($path === null) {
+        if ($path === null || strlen($path) === 0) {
             throw new AsmException(
-                "Path cannot be null for class ".get_class($this),
+                sprintf(
+                    "Invalid path SessionFilePath [%s]",
+                    $path
+                ),
                 AsmException::BAD_ARGUMENT
             );
         }

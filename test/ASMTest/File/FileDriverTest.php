@@ -9,6 +9,7 @@ use ASM\IdGenerator\RandomLibIdGenerator;
 use ASMTest\Tests\AbstractDriverTest;
 use ASM\File\FileInfo;
 use ASM\AsmException;
+use ASM\File\SessionFilePath;
 
 /**
  * Class FileDriverTest
@@ -47,8 +48,10 @@ class FileDriverTest extends AbstractDriverTest
         // inodes to implement locking, and so it cannot be used for testing.
         $path = __DIR__."/../../../tmp/sessfiletest/subdir".self::$randomSubdir;
         @mkdir($path, 0755, true);
+        
+        $this->injector->share(new SessionFilePath($path));
 
-        return $this->injector->make('ASM\File\FileDriver', [':path' => $path]);
+        return $this->injector->make('ASM\File\FileDriver');
     }
 
     /**
@@ -57,7 +60,8 @@ class FileDriverTest extends AbstractDriverTest
     function testEmptyDirNotAcceptable()
     {
         $this->setExpectedException('ASM\AsmException');
-        $this->injector->make('ASM\File\FileDriver', [':path' => ""]);
+        
+        $sessionFilePath = new SessionFilePath("");
     }
 
 
@@ -80,7 +84,11 @@ class FileDriverTest extends AbstractDriverTest
         $this->injector->alias('ASM\IDGenerator', get_class($idGenerator));
         $this->injector->share($idGenerator);
 
-        $fileDriver = new \ASM\File\FileDriver($path, $serializer, $idGenerator);
+        $fileDriver = new \ASM\File\FileDriver(
+            new SessionFilePath($path),
+            $serializer,
+            $idGenerator
+        );
     }
 
     /**
@@ -106,7 +114,8 @@ class FileDriverTest extends AbstractDriverTest
     {
         $vfsStreamDirectory = vfsStream::newDirectory('sessionTestVFS', 0);        
         $path = $vfsStreamDirectory->url();
-        $fileDriver = $this->injector->make('ASM\File\FileDriver', [':path' => $path]);
+        $this->injector->share(new SessionFilePath($path));
+        $fileDriver = $this->injector->make('ASM\File\FileDriver');
         $fileInfo = new FileInfo(null);
 
         mock('file_put_contents', function() {return false;});

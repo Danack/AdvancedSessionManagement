@@ -196,10 +196,9 @@ abstract class AbstractSessionTest extends \PHPUnit_Framework_TestCase {
 //        $this->assertInstanceOf('ASM\Session', $reopenedSession);
 //    }
 //    
-    
-    
 
     // Create a session, delete it, then attempt to re-open
+    // a new 
     function testCreateSessionDeleteThenReopen()
     {
         $cookieData = [];
@@ -218,7 +217,11 @@ abstract class AbstractSessionTest extends \PHPUnit_Framework_TestCase {
         $sessionManager2 = $this->createSessionManager();
         //The session should no longer exist.
         $reopenedSession = $sessionManager2->openSessionFromCookie($cookieData);
-        $this->assertNull($reopenedSession);
+
+        $this->assertNotEquals(
+            $reopenedSession->getSessionId(),
+            $sessionID
+        );
     }
 
 
@@ -243,7 +246,11 @@ abstract class AbstractSessionTest extends \PHPUnit_Framework_TestCase {
         $sessionManager2 = $this->createSessionManager();
         //The session should no longer exist.
         $reopenedSession = $sessionManager2->openSessionFromCookie($cookieData);
-        $this->assertNull($reopenedSession);
+        
+        $this->assertNotEquals(
+            $sessionID,
+            $reopenedSession->getSessionId()
+        );
     }
 
 

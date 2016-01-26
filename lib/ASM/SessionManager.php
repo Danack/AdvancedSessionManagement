@@ -125,12 +125,13 @@ class SessionManager
 
         $sessionID = $cookieData[$this->sessionConfig->getSessionName()];
         $existingSession = $this->openSessionByID($sessionID, $userProfile);
-        
-        if ($existingSession == null) {
-            return $this->driver->createSession($this, $userProfile);
-        }
 
-        return $existingSession;
+        if ($existingSession !== null) {
+            return $existingSession;
+        }
+        
+        $this->invalidSessionAccessed();
+        return $this->driver->createSession($this, $userProfile);
     }
 
 

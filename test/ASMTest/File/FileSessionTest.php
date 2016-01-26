@@ -5,7 +5,7 @@ namespace ASMTest\Tests\File;
 
 use ASMTest\Tests\AbstractSessionTest;
 use ASM\IdGenerator;
-
+use ASM\File\SessionFilePath;
 
 /**
  * Class FileSessionTest
@@ -45,7 +45,7 @@ class FileSessionTest extends AbstractSessionTest
         $path = __DIR__."/../../../tmp/sessfiletest/".self::$randomSubdir;
         @mkdir($path, 0755, true);
         return new \ASM\File\FileDriver(
-            $path,
+            new SessionFilePath($path),
             null,
             $idGenerator
         );
