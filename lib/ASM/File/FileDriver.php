@@ -4,6 +4,7 @@ namespace ASM\File;
 
 use ASM\Driver;
 use ASM\FailedToAcquireLockException;
+use ASM\File\SessionFilePath;
 use ASM\Serializer;
 use ASM\IdGenerator;
 use ASM\AsmException;
@@ -48,13 +49,12 @@ class FileDriver implements Driver
      * @param IdGenerator $idGenerator
      * @throws AsmException
      */
-    public function __construct($path, Serializer $serializer = null, IdGenerator $idGenerator = null)
-    {
-        if (strlen($path) == 0) {
-            throw new AsmException("Empty filepath not acceptable for storing sessions.");
-        }
-
-        $this->path = $path;
+    public function __construct(
+        SessionFilePath $path,
+        Serializer $serializer = null,
+        IdGenerator $idGenerator = null
+    ) {
+        $this->path = $path->getPath();
 
         if ($serializer) {
             $this->serializer = $serializer;
