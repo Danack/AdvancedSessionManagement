@@ -6,14 +6,13 @@ use ASM\Session;
 use Room11\HTTP\HeadersSet;
 use Tier\TierApp;
 
-
 class HTTP
 {
     /**
      * @param Session $session
      * @param HeadersSet $headerSet
      */
-    function addSessionHeader(Session $session, HeadersSet $headerSet)
+    public function addSessionHeader(Session $session, HeadersSet $headerSet)
     {
         $session->save();
 

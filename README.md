@@ -86,19 +86,6 @@ function lostLockCallable(\Asm\Session $session) {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 ## Goals
 
 
@@ -178,3 +165,19 @@ session_discard - why would that be needed?
 ### Should session re-naming be supported?
 
 ### PHP currently 'encrypts' the session data?
+
+
+## Tests
+
+
+### Unit tests
+
+```
+php vendor/bin/phpunit -c test/phpunit.xml
+```
+
+### Code style
+
+```
+php vendor/bin/phpcs --standard=./test/codesniffer.xml --encoding=utf-8 --extensions=php -p -s lib
+```

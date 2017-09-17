@@ -4,7 +4,6 @@ namespace ASM;
 
 class SessionConfig
 {
-
     const LOCK_ON_OPEN = 'LOCK_ON_OPEN';
     const LOCK_ON_WRITE = 'LOCK_ON_WRITE';
     const LOCK_MANUALLY = 'LOCK_MANUALLY';
@@ -38,15 +37,14 @@ class SessionConfig
      */
     private $maxLockWaitTimeMilliseconds;
 
-    function __construct(
+    public function __construct(
         $sessionName,
         $lifetime,
         $zombieTime,
         $lockMode = self::LOCK_ON_OPEN,
         $lockTimeInMilliseconds = 30000,
         $maxLockWaitTimeMilliseconds = 15000
-    )
-    {
+    ) {
         $this->sessionName = $sessionName;
         $this->lifetime = $lifetime;
         $this->zombieTime = $zombieTime;
@@ -83,12 +81,12 @@ class SessionConfig
         return $this->zombieTime;
     }
 
-    function getLockMilliSeconds()
+    public function getLockMilliSeconds()
     {
         return $this->lockMilliSeconds;
     }
 
-    function getMaxLockWaitTimeMilliseconds()
+    public function getMaxLockWaitTimeMilliseconds()
     {
         return $this->maxLockWaitTimeMilliseconds;
     }
@@ -96,10 +94,8 @@ class SessionConfig
     /**
      * @return string
      */
-    function getLockMode()
+    public function getLockMode()
     {
         return $this->lockMode;
     }
 }
-
- 

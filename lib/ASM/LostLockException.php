@@ -1,8 +1,8 @@
 <?php
 
-
 namespace ASM;
 
+class LostLockException extends AsmException
+{
 
-class LostLockException extends AsmException {}
-
+}

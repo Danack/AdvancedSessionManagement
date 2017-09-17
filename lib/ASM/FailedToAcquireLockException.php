@@ -1,9 +1,8 @@
 <?php
 
-
 namespace ASM;
 
+class FailedToAcquireLockException extends AsmException
+{
 
-class FailedToAcquireLockException extends AsmException {}
-
- 
+}

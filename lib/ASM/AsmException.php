@@ -14,4 +14,3 @@ class AsmException extends \Exception
     const BAD_ARGUMENT = 2;
     const ID_CLASH = 3;
 }
-

@@ -4,6 +4,5 @@ namespace ASM;
 
 interface IdGenerator
 {
-    function generateSessionId();
+    public function generateSessionId();
 }
-

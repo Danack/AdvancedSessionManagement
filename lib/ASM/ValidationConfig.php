@@ -2,10 +2,8 @@
 
 namespace ASM;
 
-
 class ValidationConfig
 {
-
     /**
      * @var callable Which callable to call when the profile has changed. The callable
      * is passed both the profile as it was when the session was generated, and the new profile
@@ -22,14 +20,13 @@ class ValidationConfig
      */
     private $invalidSessionAccessed;
 
-
     /**
      * @var callable Which callable to call when a lock has been lost. If this callable
      * is not set
      */
     private $lostLockCallable;
 
-    function __construct(
+    public function __construct(
         callable $profileChanged = null,
         callable $zombieKeyAccessed = null,
         callable $invalidSessionAccessed = null,
@@ -73,5 +70,3 @@ class ValidationConfig
         return $this->lostLockCallable;
     }
 }
-
- 

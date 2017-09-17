@@ -1,8 +1,6 @@
 <?php
 
-
 namespace ASM;
-
 
 interface Serializer
 {
@@ -11,13 +9,12 @@ interface Serializer
      * @param array $data
      * @return mixed
      */
-    function serialize(array $data);
+    public function serialize(array $data);
 
     /**
      * Creates a value from a stored representation
      * @param string $string
      * @return mixed
      */
-    function unserialize($string);
+    public function unserialize($string);
 }
-

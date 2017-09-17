@@ -2,14 +2,13 @@
 
 namespace ASM\Profile;
 
-
 class SimpleProfile
 {
     private $ipAddress;
 
     private $userAgent;
 
-    function __construct($userAgent, $ipAddress)
+    public function __construct($userAgent, $ipAddress)
     {
         $this->ipAddress = $ipAddress;
         $this->userAgent = $userAgent;

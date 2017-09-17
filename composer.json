@@ -8,12 +8,12 @@
             "email": "Danack@basereality.com"
         }
     ],
-
     "require-dev": {
         "mikey179/vfsStream": "1.5.0",
         "phpunit/phpunit": "4.6.6",
         "rdlowrey/auryn": "^1.0.2",
-        "squizlabs/php_codesniffer": "^2.0.0"
+        "squizlabs/php_codesniffer": "^2.8",
+        "psr/http-message": "^1.0"
     },
     "require": {
         "ircmaxell/random-lib": "^1.1.0",

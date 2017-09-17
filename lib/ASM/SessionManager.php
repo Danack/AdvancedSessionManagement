@@ -28,18 +28,18 @@ class SessionManager
     /**
      *
      */
-    const lockSleepTime = 1000;
+    const LOCK_SLEEP_TIME = 1000;
 
     /**
      * @param SessionConfig $sessionConfig
      * @param SessionDriver $driver
      * @param ValidationConfig $validationConfig
      */
-    function __construct(
+    public function __construct(
         SessionConfig $sessionConfig,
         SessionDriver $driver,
-        ValidationConfig $validationConfig = null)
-    {
+        ValidationConfig $validationConfig = null
+    ) {
         $this->sessionConfig = $sessionConfig;
         $this->driver = $driver;
 
@@ -54,13 +54,13 @@ class SessionManager
             );
         }
     }
-    
-    function getSessionConfig()
+
+    public function getSessionConfig()
     {
         return $this->sessionConfig;
     }
-    
-    function getLockMode()
+
+    public function getLockMode()
     {
         return $this->sessionConfig->getLockMode();
     }
@@ -117,7 +117,7 @@ class SessionManager
      * @param $userProfile
      * @return Session
      */
-    function createSession(array $cookieData, $userProfile = null)
+    public function createSession(array $cookieData, $userProfile = null)
     {
         if (!array_key_exists($this->sessionConfig->getSessionName(), $cookieData)) {
             return $this->driver->createSession($this, $userProfile);
@@ -131,6 +131,7 @@ class SessionManager
         }
         
         $this->invalidSessionAccessed();
+
         return $this->driver->createSession($this, $userProfile);
     }
 
@@ -226,7 +227,8 @@ class SessionManager
 //            );
 //
 //            if ($totalTimeWaitedForLock >= $this->sessionConfig->getMaxLockWaitTimeMilliseconds()) {
-//                throw new FailedToAcquireLockException("Failed to acquire lock for session data after time $totalTimeWaitedForLock ");
+//                throw new FailedToAcquireLockException("Failed to acquire lock for session data after
+// time $totalTimeWaitedForLock ");
 //            }
 //            
 //            if (!$lockAcquired) {
@@ -313,7 +315,7 @@ class SessionManager
      * @return mixed|null
      * @throws AsmException
      */
-    function performProfileSecurityCheck($newProfile, $existingProfiles)
+    public function performProfileSecurityCheck($newProfile, $existingProfiles)
     {
         if ($newProfile === null) {
             return $existingProfiles;
@@ -341,8 +343,14 @@ class SessionManager
         $newProfiles = call_user_func($profileChangedCallable, $this, $newProfile, $existingProfiles);
         
         if (is_array($newProfiles) == false) {
+            $message = sprintf(
+                "The profileChangedCallable must return an array of the allowed" .
+                " session profiles, but instead a [%s] was returned",
+                gettype($newProfiles)
+            );
+
             throw new AsmException(
-                "The profileChangedCallable must return an array of the allowed session profiles, but instead a ".gettype($newProfiles)."was returned",
+                $message,
                 AsmException::BAD_ARGUMENT
             );
         }
@@ -360,15 +368,14 @@ class SessionManager
     /**
      *
      */
-    function destroyExpiredSessions()
+    public function destroyExpiredSessions()
     {
-
     }
 
     /**
      * @param $sessionID
      */
-    function deleteSession($sessionID)
+    public function deleteSession($sessionID)
     {
         $this->driver->deleteSessionByID($sessionID);
     }
@@ -384,8 +391,8 @@ class SessionManager
      * @return array
      * @throws AsmException
      */
-    function getHeaders(
-        $sessionId, 
+    public function getHeaders(
+        $sessionId,
         $privacy,
         $domain,
         $path,
@@ -395,14 +402,16 @@ class SessionManager
         $time = time();
 
         $headers = [];
-        $headers["Set-Cookie"] = ASM::generateCookieHeaderString($time,
+        $headers["Set-Cookie"] = ASM::generateCookieHeaderString(
+            $time,
             $this->sessionConfig->getSessionName(),
             $sessionId,
             $this->sessionConfig->getLifetime(),
             $path,
             $domain,
             $secure,
-            $httpOnly);
+            $httpOnly
+        );
 
 
         $cachingHeaders = ASM::getCacheControlPrivacyHeader(

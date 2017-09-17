@@ -1,16 +1,14 @@
 <?php
 
-
 namespace ASM;
 
 use ASM\AsmException;
 use ASM\SessionManager;
 
-    
-class ASM 
+class ASM
 {
-    /** 
-     * 
+    /**
+     *
      * @param $caching
      * @return array
      * @throws AsmException
@@ -49,14 +47,15 @@ class ASM
      * @param bool $httpOnly
      * @return string
      */
-    public static function generateCookieHeaderString($time,
-                                  $sessionName,
-                                  $sessionID,
-                                  $lifetime,
-                                  $path = null,
-                                  $domain = false,
-                                  $secure = false,
-                                  $httpOnly = true
+    public static function generateCookieHeaderString(
+        $time,
+        $sessionName,
+        $sessionID,
+        $lifetime,
+        $path = null,
+        $domain = false,
+        $secure = false,
+        $httpOnly = true
     ) {
         $COOKIE_EXPIRES = "; expires=";
         $COOKIE_MAX_AGE = "; Max-Age=";

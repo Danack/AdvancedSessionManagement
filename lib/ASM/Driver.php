@@ -1,8 +1,6 @@
 <?php
 
-
 namespace ASM;
-
 
 /**
  * Interface Driver
@@ -22,7 +20,7 @@ interface Driver
      * @param null $userProfile
      * @return Session|null The newly opened session
      */
-    function openSessionByID($sessionID, SessionManager $sessionManager, $userProfile = null);
+    public function openSessionByID($sessionID, SessionManager $sessionManager, $userProfile = null);
 
     /**
      * Create a new session.
@@ -30,7 +28,7 @@ interface Driver
      * @param null $userProfile
      * @return Session The newly opened session.
      */
-    function createSession(SessionManager $sessionManager, $userProfile = null);
+    public function createSession(SessionManager $sessionManager, $userProfile = null);
 
 
     /**
@@ -43,14 +41,13 @@ interface Driver
      * Delete a single session that matches the $sessionID
      * @param $sessionID
      */
-    function deleteSessionByID($sessionID);
+    public function deleteSessionByID($sessionID);
 
     /**
      * @param $sessionID
      * @return mixed
      */
-    function forceReleaseLockByID($sessionID);
+    public function forceReleaseLockByID($sessionID);
 
     //function findSessionIDFromZombieID($zombieSsessionID);
 }
-

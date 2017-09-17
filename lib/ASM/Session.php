@@ -3,10 +3,8 @@
 
 namespace ASM;
 
-
 interface Session
 {
-
     /**
      * @param $privacy int one of the \ASM\SessionManager::CACHE_* constants
      * @param null $path
@@ -15,51 +13,53 @@ interface Session
      * @param bool $httpOnly
      * @return mixed
      */
-    function getHeaders($privacy,
-                        $path = null,
-                        $domain = false,
-                        $secure = false,
-                        $httpOnly = true);
+    public function getHeaders(
+        $privacy,
+        $path = null,
+        $domain = false,
+        $secure = false,
+        $httpOnly = true
+    );
 
     /**
      * @return mixed
      */
-    function getSessionId();
+    public function getSessionId();
 
     /**
      * @return array
      */
-    function getData();
+    public function getData();
 
     /**
      * @param array $data
      * @return mixed
      */
-    function setData(array $data);
+    public function setData(array $data);
 
     /**
      * @return mixed
      */
-    function save();
+    public function save();
 
     /**
      * Close the session
      * @param bool $saveData
      * @return mixed
      */
-    function close($saveData = true);
+    public function close($saveData = true);
 
     /**
      * Deletes the Session from memory and storage.
      * @return mixed
      */
-    function delete();
+    public function delete();
     
 
     /**
      * A session should attempt to release any locks when it is destructed.
      */
-    function __destruct();
+    public function __destruct();
     
     /**
      * Test whether the session thinks the data is locked. The result may
@@ -67,14 +67,14 @@ interface Session
      *
      * @return boolean
      */
-    function isLocked();
+    public function isLocked();
 
     /**
      * If the driver
      * @param $sessionID
      * @return boolean
      */
-    function validateLock();
+    public function validateLock();
 
     /**
      * Acquire a lock for the session, or renew it if the session already
@@ -85,32 +85,32 @@ interface Session
      * lock before giving up and throwing an exception.
      * @return mixed
      */
-    function acquireLock($lockTimeMS, $acquireTimeoutMS);
+    public function acquireLock($lockTimeMS, $acquireTimeoutMS);
 
     /**
      * Renew the lock the session has on the data.
-     * 
+     *
      * If the lock has been broken by another process, an exception
-     * will be thrown, to prevent data loss through concurrent modification. 
-     * 
+     * will be thrown, to prevent data loss through concurrent modification.
+     *
      * @param $milliseconds
      * @return mixed
      * @throws AsmException
      */
-    function renewLock($milliseconds);
+    public function renewLock($milliseconds);
 
     /**
      * Release the lock the session has on the data.
-     * TODO - should this throw an exception if the lock was already lost? 
+     * TODO - should this throw an exception if the lock was already lost?
      * @return mixed
      */
-    function releaseLock();
+    public function releaseLock();
 
     /**
      * TODO - naming...
      * @return mixed
      */
-    function forceReleaseLocks();
+    public function forceReleaseLocks();
 
     /**
      * Is the session active or not? Sessions are active either if the client
@@ -120,7 +120,7 @@ interface Session
      * to the client.
      * @return bool
      */
-    function isActive();
+    public function isActive();
 
     /**
      * @param $dyingSessionID
@@ -136,7 +136,6 @@ interface Session
      */
     //function findSessionIDFromZombieID($zombieSsessionID);
     
-    function setSessionVariable($name, $value);
-    function getSessionVariable($name, $default = false, $clear = false);
+    public function setSessionVariable($name, $value);
+    public function getSessionVariable($name, $default = false, $clear = false);
 }
-
