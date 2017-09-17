@@ -8,11 +8,10 @@ git:
 
 php:
   - 7
-  - 5.6
-  - 5.5
-  - 5.4
 
 before_script:
   - composer install
 
-script: php ./vendor/bin/phpunit --configuration ./phpunit.xml --coverage-text
+script:
+  - php vendor/bin/phpcs --standard=./test/codesniffer.xml --encoding=utf-8 --extensions=php -p -s lib
+  - php ./vendor/bin/phpunit --configuration ./phpunit.xml --coverage-text
