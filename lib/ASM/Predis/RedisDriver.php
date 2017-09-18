@@ -1,6 +1,6 @@
 <?php
 
-namespace ASM\Redis;
+namespace ASM\Predis;
 
 use ASM\AsmException;
 use ASM\Driver;
@@ -12,6 +12,8 @@ use ASM\FailedToAcquireLockException;
 use ASM\SessionConfig;
 use ASM\Session;
 use Predis\Client as RedisClient;
+use ASM\RedisKeyGenerator;
+use ASM\Redis\StandardRedisKeyGenerator;
 
 class RedisDriver implements Driver
 {
@@ -35,6 +37,10 @@ class RedisDriver implements Driver
      * @var IdGenerator
      */
     private $idGenerator;
+
+    /** @var StandardRedisKeyGenerator  */
+    private $keyGenerator;
+
 
     /**
      * Redis lua script for releasing a lock. Returns int(1) when the lock was
@@ -80,7 +86,8 @@ END;
     public function __construct(
         RedisClient $redisClient,
         Serializer $serializer = null,
-        IdGenerator $idGenerator = null
+        IdGenerator $idGenerator = null,
+        RedisKeyGenerator $keyGenerator = null
     ) {
         $this->redisClient = $redisClient;
 
@@ -96,6 +103,13 @@ END;
         }
         else {
             $this->idGenerator = new \ASM\IdGenerator\RandomLibIdGenerator();
+        }
+
+        if ($keyGenerator) {
+            $this->keyGenerator = $keyGenerator;
+        }
+        else {
+            $this->keyGenerator = new StandardRedisKeyGenerator();
         }
     }
 
@@ -115,7 +129,7 @@ END;
 
         $lockToken = $this->acquireLockIfRequired($sessionId, $sessionManager);
 
-        $dataKey = generateSessionDataKey($sessionId);
+        $dataKey = $this->keyGenerator->generateSessionDataKey($sessionId);
         $dataString = $this->redisClient->get($dataKey);
         if ($dataString == null) {
             if ($lockToken !== null) {
@@ -191,7 +205,7 @@ END;
         for ($count = 0; $count < 10; $count++) {
             $sessionId = $this->idGenerator->generateSessionID();
             $lockToken = $this->acquireLockIfRequired($sessionId, $sessionManager);
-            $dataKey = generateSessionDataKey($sessionId);
+            $dataKey = $this->keyGenerator->generateSessionDataKey($sessionId);
             $set = $this->redisClient->set(
                 $dataKey,
                 $dataString,
@@ -229,7 +243,7 @@ END;
      */
     public function deleteSessionByID($sessionID)
     {
-        $dataKey = generateSessionDataKey($sessionID);
+        $dataKey = $this->keyGenerator->generateSessionDataKey($sessionID);
         $this->redisClient->del($dataKey);
     }
 
@@ -247,7 +261,7 @@ END;
         $data['data'] = $saveData;
         $data['profiles'] = $existingProfiles;
 
-        $dataKey = generateSessionDataKey($sessionID);
+        $dataKey = $this->keyGenerator->generateSessionDataKey($sessionID);
         $dataString = $this->serializer->serialize($data);
         $written = $this->redisClient->set(
             $dataKey,
@@ -279,7 +293,7 @@ END;
             return false;
         }
         
-        $lockKey = generateLockKey($sessionID);
+        $lockKey = $this->keyGenerator->generateLockKey($sessionID);
         $storedLockNumber = $this->redisClient->get($lockKey);
         
         if ($storedLockNumber === $lockToken) {
@@ -299,7 +313,7 @@ END;
      */
     public function acquireLock($sessionID, $lockTimeMS, $acquireTimeoutMS)
     {
-        $lockKey = generateLockKey($sessionID);
+        $lockKey = $this->keyGenerator->generateLockKey($sessionID);
         $lockToken = $this->idGenerator->generateSessionID();
         $finished = false;
 
@@ -335,7 +349,7 @@ END;
      */
     public function releaseLock($sessionId, $lockToken)
     {
-        $lockKey = generateLockKey($sessionId);
+        $lockKey = $this->keyGenerator->generateLockKey($sessionId);
         $result = $this->redisClient->eval(self::UNLOCK_SCRIPT, 1, $lockKey, $lockToken);
         
         // TODO - should
@@ -354,7 +368,7 @@ END;
      */
     public function forceReleaseLockByID($sessionID)
     {
-        $lockKey = generateLockKey($sessionID);
+        $lockKey = $this->keyGenerator->generateLockKey($sessionID);
         $this->redisClient->del($lockKey);
     }
 
@@ -367,7 +381,7 @@ END;
      */
     public function renewLock($sessionID, $lockToken, $lockTimeMS)
     {
-        $lockKey = generateLockKey($sessionID);
+        $lockKey = $this->keyGenerator->generateLockKey($sessionID);
         $result = $this->redisClient->eval(
             self::RENEW_LOCK_SCRIPT,
             1,
@@ -435,7 +449,7 @@ END;
      */
     public function get($sessionID, $index)
     {
-        $key = generateAsyncKey($sessionID, $index);
+        $key = $this->keyGenerator->generateAsyncKey($sessionID, $index);
 
         return $this->redisClient->hget($key, $index);
     }
@@ -449,7 +463,7 @@ END;
      */
     public function set($sessionID, $index, $value)
     {
-        $key = generateAsyncKey($sessionID, $index);
+        $key = $this->keyGenerator->generateAsyncKey($sessionID, $index);
 
         return $this->redisClient->hset($key, $index, $value);
     }
@@ -463,7 +477,7 @@ END;
      */
     public function increment($sessionID, $index, $increment)
     {
-        $key = generateAsyncKey($sessionID, $index);
+        $key = $this->keyGenerator->generateAsyncKey($sessionID, $index);
 
         return $this->redisClient->hincrby($key, $index, $increment);
     }
@@ -475,7 +489,7 @@ END;
      */
     public function getList($sessionID, $index)
     {
-        $key = generateAsyncKey($sessionID, $index);
+        $key = $this->keyGenerator->generateAsyncKey($sessionID, $index);
 
         return $this->redisClient->lrange($key, 0, -1);
     }
@@ -488,7 +502,7 @@ END;
      */
     public function appendToList($sessionID, $index, $value)
     {
-        $key = generateAsyncKey($sessionID, $index);
+        $key = $this->keyGenerator->generateAsyncKey($sessionID, $index);
         
         if (is_array($value)) {
             return $this->redisClient->rpush($key, $value);
@@ -505,7 +519,7 @@ END;
      */
     public function clearList($sessionID, $index)
     {
-        $key = generateAsyncKey($sessionID, $index);
+        $key = $this->keyGenerator->generateAsyncKey($sessionID, $index);
         return $this->redisClient->del($key);
     }
 }

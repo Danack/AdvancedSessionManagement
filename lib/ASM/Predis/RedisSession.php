@@ -1,7 +1,7 @@
 <?php
 
 
-namespace ASM\Redis;
+namespace ASM\Predis;
 
 use ASM\AsmException;
 use ASM\Session;
@@ -69,8 +69,8 @@ class RedisSession implements Session
      */
     public function getHeaders(
         $privacy,
-        $domain = false,
         $path = null,
+        $domain = false,
         $secure = false,
         $httpOnly = true
     ) {

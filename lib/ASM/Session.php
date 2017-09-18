@@ -137,5 +137,6 @@ interface Session
     //function findSessionIDFromZombieID($zombieSsessionID);
     
     public function setSessionVariable($name, $value);
-    public function getSessionVariable($name, $default = false, $clear = false);
+
+    public function getSessionVariable($name, $default = null, $clear = false);
 }

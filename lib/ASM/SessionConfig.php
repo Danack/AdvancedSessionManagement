@@ -40,7 +40,7 @@ class SessionConfig
     public function __construct(
         $sessionName,
         $lifetime,
-        $zombieTime,
+        $zombieTime = 5,
         $lockMode = self::LOCK_ON_OPEN,
         $lockTimeInMilliseconds = 30000,
         $maxLockWaitTimeMilliseconds = 15000

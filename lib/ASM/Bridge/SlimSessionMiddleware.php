@@ -26,10 +26,11 @@ class SlimSessionMiddleware
 
     public function __invoke(Request $request, ResponseInterface $response, $next)
     {
-        // todo - read header, not cookie
+        //TODO - avoid magic variable.
         $session = $this->sessionManager->createSession($_COOKIE);
 
-
+        $this->injector->share($session);
+        $this->injector->alias(\ASM\Session::class, get_class($session));
 
         $response = $next($request, $response);
         $session->save();
