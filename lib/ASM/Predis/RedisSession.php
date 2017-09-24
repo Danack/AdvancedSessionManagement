@@ -4,6 +4,7 @@
 namespace ASM\Predis;
 
 use ASM\AsmException;
+use ASM\Encrypter;
 use ASM\Session;
 use ASM\SessionManager;
 use ASM\LostLockException;
@@ -17,7 +18,13 @@ class RedisSession implements Session
      */
     protected $redisDriver;
 
-    protected $sessionManager = false;
+    /** @var SessionManager */
+    protected $sessionManager;
+
+    /**
+     * @var Encrypter
+     */
+    protected $encrypter;
     
     private $isActive = false;
 
@@ -38,6 +45,7 @@ class RedisSession implements Session
         $sessionID,
         RedisDriver $redisDriver,
         SessionManager $sessionManager,
+        Encrypter $encrypter,
         array $data,
         array $currentProfiles,
         $isActive,
@@ -46,12 +54,16 @@ class RedisSession implements Session
         $this->sessionId = $sessionID;
         $this->redisDriver = $redisDriver;
         $this->sessionManager = $sessionManager;
+        $this->encrypter = $encrypter;
         $this->data = $data;
         $this->currentProfiles = $currentProfiles;
         $this->isActive = $isActive;
         $this->lockToken = $lockToken;
     }
 
+    /**
+     *
+     */
     public function __destruct()
     {
         $this->releaseLock();
@@ -108,6 +120,7 @@ class RedisSession implements Session
     {
         $this->redisDriver->save(
             $this,
+            $this->encrypter,
             $this->data,
             $this->currentProfiles
         );
@@ -152,27 +165,6 @@ class RedisSession implements Session
 
     /**
      * @param $index
-     * @return int
-     */
-    public function get($index)
-    {
-        return $this->redisDriver->get($this->sessionId, $index);
-    }
-
-
-    /**
-     * @param $index
-     * @param $value
-     * @return int
-     */
-    public function set($index, $value)
-    {
-        return $this->redisDriver->set($this->sessionId, $index, $value);
-    }
-
-
-    /**
-     * @param $index
      * @param $increment
      * @return int
      */
@@ -211,7 +203,6 @@ class RedisSession implements Session
         return $this->redisDriver->clearList($this->sessionId, $index);
     }
 
-
     /**
      * @param $milliseconds
      * @throws AsmException
@@ -223,6 +214,9 @@ class RedisSession implements Session
         $this->redisDriver->renewLock($this->sessionId, $this->lockToken, $milliseconds);
     }
 
+    /**
+     * @return bool
+     */
     public function isActive()
     {
         return $this->isActive;
@@ -260,13 +254,20 @@ class RedisSession implements Session
         $this->redisDriver->forceReleaseLockByID($this->sessionId);
     }
 
-    public function setSessionVariable($name, $value)
+    /**
+     * @param $name
+     * @param $value
+     */
+    public function set($name, $value)
     {
         $this->data[$name] = $value;
         $this->isActive = true;
     }
 
-    public function getSessionVariable($name, $default = false, $clear = false)
+    /**
+     * @inheritdoc
+     */
+    public function get($name, $default = null, $clear = false)
     {
         if (array_key_exists($name, $this->data) == false) {
             return $default;

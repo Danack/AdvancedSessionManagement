@@ -8,12 +8,13 @@ use ASM\IdGenerator;
 use ASM\Serializer;
 use ASM\SessionManager;
 use ASM\LostLockException;
+use ASM\Encrypter;
 use ASM\FailedToAcquireLockException;
 use ASM\SessionConfig;
 use ASM\Session;
-use Predis\Client as RedisClient;
 use ASM\RedisKeyGenerator;
 use ASM\Redis\StandardRedisKeyGenerator;
+use Predis\Client as RedisClient;
 
 class RedisDriver implements Driver
 {
@@ -32,7 +33,6 @@ class RedisDriver implements Driver
      */
     private $serializer;
 
-
     /**
      * @var IdGenerator
      */
@@ -40,7 +40,6 @@ class RedisDriver implements Driver
 
     /** @var StandardRedisKeyGenerator  */
     private $keyGenerator;
-
 
     /**
      * Redis lua script for releasing a lock. Returns int(1) when the lock was
@@ -115,28 +114,28 @@ END;
 
 
     /**
-     * Open an existing session. Returns either the session data or null if
-     * the session could not be found.
-     * @param $sessionId
-     * @param SessionManager $sessionManager
-     * @param null $userProfile
-     * @throws AsmException
-     * @return null|string
+     * @inheritdoc
      */
-    public function openSessionByID($sessionId, SessionManager $sessionManager, $userProfile = null)
-    {
+    public function openSessionByID(
+        $sessionId,
+        Encrypter $encrypter,
+        SessionManager $sessionManager,
+        $userProfile = null
+    ) {
         $sessionId = (string)$sessionId;
 
         $lockToken = $this->acquireLockIfRequired($sessionId, $sessionManager);
 
         $dataKey = $this->keyGenerator->generateSessionDataKey($sessionId);
-        $dataString = $this->redisClient->get($dataKey);
-        if ($dataString == null) {
+        $encryptedDataString = $this->redisClient->get($dataKey);
+        if ($encryptedDataString == null) {
             if ($lockToken !== null) {
                 $this->releaseLock($sessionId, $lockToken);
             }
             return null;
         }
+
+        $dataString = $encrypter->decrypt($encryptedDataString);
 
         $fullData = $this->serializer->unserialize($dataString);
         $currentProfiles = [];
@@ -160,6 +159,7 @@ END;
             $sessionId,
             $this,
             $sessionManager,
+            $encrypter,
             $data,
             $currentProfiles,
             true,
@@ -167,6 +167,11 @@ END;
         );
     }
 
+    /**
+     * @param $sessionId
+     * @param SessionManager $sessionManager
+     * @return null|string
+     */
     private function acquireLockIfRequired($sessionId, SessionManager $sessionManager)
     {
         $lockToken = null;
@@ -188,7 +193,7 @@ END;
      * @param null $userProfile
      * @throws AsmException
      */
-    public function createSession(SessionManager $sessionManager, $userProfile = null)
+    public function createSession(Encrypter $encrypter, SessionManager $sessionManager, $userProfile = null)
     {
         $sessionLifeTime = $sessionManager->getSessionConfig()->getLifetime();
         $initialData = [];
@@ -219,6 +224,7 @@ END;
                     $sessionId,
                     $this,
                     $sessionManager,
+                    $encrypter,
                     [],
                     $profiles,
                     false,
@@ -247,12 +253,8 @@ END;
         $this->redisClient->del($dataKey);
     }
 
-    /**
-     * @param $sessionID
-     * @param $saveData
-     * @param $existingProfiles
-     */
-    public function save(Session $session, $saveData, $existingProfiles)
+
+    public function save(Session $session, Encrypter $encrypter, $saveData, $existingProfiles)
     {
         $sessionID = $session->getSessionId();
         $sessionLifeTime = 3600; // 1 hour
@@ -263,6 +265,9 @@ END;
 
         $dataKey = $this->keyGenerator->generateSessionDataKey($sessionID);
         $dataString = $this->serializer->serialize($data);
+
+        $encryptedDataString = $encrypter->encrypt($dataString);
+
         $written = $this->redisClient->set(
             $dataKey,
             $dataString,

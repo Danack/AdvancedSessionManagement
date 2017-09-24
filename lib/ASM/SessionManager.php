@@ -3,8 +3,11 @@
 namespace ASM;
 
 use ASM\Driver as SessionDriver;
+use ASM\Encryptor\NullEncrypterFactory;
+use ASM\Encryptor\OpenSslEncrypterFactory;
+use Psr\Http\Message\ServerRequestInterface as ServerRequest;
 
-class SessionManager
+class SessionManager implements CookieGenerator
 {
     const READ_ONLY = 'READ_ONLY';
     const WRITE_LOCK = 'WRITE_LOCK';
@@ -26,19 +29,32 @@ class SessionManager
     protected $driver;
 
     /**
+     * @var ValidationConfig
+     */
+    protected $validationConfig;
+
+    /**
+     * @var EncrypterFactory
+     */
+    protected $encrypterFactory;
+
+    /**
      *
      */
     const LOCK_SLEEP_TIME = 1000;
 
     /**
+     * SessionManager constructor.
      * @param SessionConfig $sessionConfig
-     * @param SessionDriver $driver
-     * @param ValidationConfig $validationConfig
+     * @param Driver $driver
+     * @param ValidationConfig|null $validationConfig
+     * @param EncrypterFactory|null $encrypterFactory
      */
     public function __construct(
         SessionConfig $sessionConfig,
         SessionDriver $driver,
-        ValidationConfig $validationConfig = null
+        ValidationConfig $validationConfig = null,
+        EncrypterFactory $encrypterFactory = null
     ) {
         $this->sessionConfig = $sessionConfig;
         $this->driver = $driver;
@@ -53,6 +69,14 @@ class SessionManager
                 null
             );
         }
+
+        if ($encrypterFactory) {
+            $this->encrypterFactory = $encrypterFactory;
+        }
+        else {
+            $this->encrypterFactory = new OpenSslEncrypterFactory($sessionConfig->getSessionName() . '_key');
+            //$this->encrypterFactory = new NullEncrypterFactory();
+        }
     }
 
     public function getSessionConfig()
@@ -65,18 +89,21 @@ class SessionManager
         return $this->sessionConfig->getLockMode();
     }
 
-    public function openSessionFromCookie(array $cookieData, $userProfile = null)
+    public function openSessionFromCookie(ServerRequest $request, $userProfile = null)
     {
+        $cookieData = $request->getCookieParams();
+
+        $encrypter = $this->encrypterFactory->create($cookieData);
         if (!array_key_exists($this->sessionConfig->getSessionName(), $cookieData)) {
             return null;
         }
 
         $sessionID = $cookieData[$this->sessionConfig->getSessionName()];
 
-        $existingSession = $this->openSessionByID($sessionID, $userProfile);
+        $existingSession = $this->openSessionByID($sessionID, $encrypter, $userProfile);
         
         if ($existingSession == null) {
-            return $this->driver->createSession($this, $userProfile);
+            return $this->driver->createSession($encrypter, $this, $userProfile);
         }
         
         return $existingSession;
@@ -88,14 +115,15 @@ class SessionManager
      * Opens and returns the data for an existing session, if and only if the
      * client sent a valid existing session ID. Otherwise returns null.
      *
-     * @param array $cookieData
+     * @param string $sessionID
      * @param null $userProfile
      * @return Session|null
      */
-    public function openSessionByID($sessionID, $userProfile = null)
+    protected function openSessionByID(string $sessionID, Encrypter $encrypter, string $userProfile = null)
     {
         $session = $this->driver->openSessionByID(
             $sessionID,
+            $encrypter,
             $this,
             $userProfile
         );
@@ -113,18 +141,23 @@ class SessionManager
      * Opens and returns the data for an existing session, if and only if the
      * client sent a valid existing session ID. Otherwise creates a new session.
      *
-     * @param array $cookieData
-     * @param $userProfile
-     * @return Session
+
+     * @param ServerRequest $request
+     * @param null $userProfile
+     * @return
      */
-    public function createSession(array $cookieData, $userProfile = null)
+    public function createSession(ServerRequest $request, $userProfile = null)
     {
+        $cookieData = $request->getCookieParams();
+
+        $encrypter = $this->encrypterFactory->create($cookieData);
+
         if (!array_key_exists($this->sessionConfig->getSessionName(), $cookieData)) {
-            return $this->driver->createSession($this, $userProfile);
+            return $this->driver->createSession($encrypter,$this, $userProfile);
         }
 
         $sessionID = $cookieData[$this->sessionConfig->getSessionName()];
-        $existingSession = $this->openSessionByID($sessionID, $userProfile);
+        $existingSession = $this->openSessionByID($sessionID, $encrypter, $userProfile);
 
         if ($existingSession !== null) {
             return $existingSession;
@@ -132,7 +165,7 @@ class SessionManager
         
         $this->invalidSessionAccessed();
 
-        return $this->driver->createSession($this, $userProfile);
+        return $this->driver->createSession($encrypter, $this, $userProfile);
     }
 
 

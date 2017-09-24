@@ -11,7 +11,7 @@ interface Session
      * @param bool $domain
      * @param bool $secure
      * @param bool $httpOnly
-     * @return mixed
+     * @return string[]
      */
     public function getHeaders(
         $privacy,
@@ -27,11 +27,14 @@ interface Session
     public function getSessionId();
 
     /**
+     * Get all of the data stored in this session.
      * @return array
      */
     public function getData();
 
     /**
+     * Set all of the data stored in this session.
+     *
      * @param array $data
      * @return mixed
      */
@@ -136,7 +139,7 @@ interface Session
      */
     //function findSessionIDFromZombieID($zombieSsessionID);
     
-    public function setSessionVariable($name, $value);
+    public function set($name, $value);
 
-    public function getSessionVariable($name, $default = null, $clear = false);
+    public function get($name, $default = null, $clear = false);
 }

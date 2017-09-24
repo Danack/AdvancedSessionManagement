@@ -10,6 +10,7 @@ interface Serializer
      * @return mixed
      */
     public function serialize(array $data);
+    // TODO - replace $data with a class...
 
     /**
      * Creates a value from a stored representation

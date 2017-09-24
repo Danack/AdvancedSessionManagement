@@ -24,7 +24,7 @@ class RandomLibIdGenerator implements IdGenerator
         // We use a restricted set of characters to allow simplifications
         // in the session driver implementations.
         return $this->generator->generateString(
-            10,
+            16,
             '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
         );
     }

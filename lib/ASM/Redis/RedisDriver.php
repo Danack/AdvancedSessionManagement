@@ -31,7 +31,7 @@ use ASM\RedisKeyGenerator;
 class RedisDriver implements Driver
 {
     /**
-     * @var \Predis\Client
+     * @var \Redis
      */
     private $redisClient;
 

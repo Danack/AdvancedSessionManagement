@@ -6,7 +6,7 @@ namespace ASM\Bridge;
 
 use Auryn\Injector;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface as Request;
+use Psr\Http\Message\ServerRequestInterface as ServerRequest;
 use Asm\Session;
 use ASM\SessionManager;
 
@@ -24,17 +24,22 @@ class SlimSessionMiddleware
         $this->injector = $injector;
     }
 
-    public function __invoke(Request $request, ResponseInterface $response, $next)
+    public function __invoke(ServerRequest $request, ResponseInterface $response, $next)
     {
-        //TODO - avoid magic variable.
-        $session = $this->sessionManager->createSession($_COOKIE);
-
+        $session = $this->sessionManager->createSession($request);
         $this->injector->share($session);
         $this->injector->alias(\ASM\Session::class, get_class($session));
 
         $response = $next($request, $response);
         $session->save();
-        $headers = $session->getHeaders(\ASM\SessionManager::CACHE_PRIVATE, '/');
+        $headers = $session->getHeaders(
+            \ASM\SessionManager::CACHE_PRIVATE,
+            '/'
+
+//        $domain = false,
+//        $secure = false,
+//        $httpOnly = true
+        );
 
         foreach ($headers as $key => $value) {
             /** @var $response \Psr\Http\Message\ResponseInterface */

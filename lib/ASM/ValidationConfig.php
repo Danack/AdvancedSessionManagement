@@ -2,6 +2,11 @@
 
 namespace ASM;
 
+/**
+ * Class ValidationConfig
+ *
+ *
+ */
 class ValidationConfig
 {
     /**
