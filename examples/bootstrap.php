@@ -3,8 +3,8 @@
 require_once('../../vendor/autoload.php');
 
 
-use ASM\SessionManager;
-use ASM\SessionConfig;
+use Asm\SessionManager;
+use Asm\SessionConfig;
 use Predis\Client as RedisClient;
 
 define('ASYNC_INC_KEY', 'ASYNC_INC_KEY');

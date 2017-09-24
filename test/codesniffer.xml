@@ -32,7 +32,7 @@
 
         <!-- TODO make this be newline -->
         <exclude name="Squiz.ControlStructures.ControlSignature.SpaceAfterCloseBrace"/>
-        
+
         <!-- This makes co-ordinate pairs hard to read -->
         <exclude name="PSR2.Methods.FunctionCallSignature.MultipleArguments" />
         
@@ -41,8 +41,10 @@
         <exclude name="PSR2.ControlStructures.SwitchDeclaration.WrongOpenercase"/>
         <exclude name="PSR2.ControlStructures.SwitchDeclaration.WrongOpenerdefault"/>
     </rule>
+
+    <rule ref="../vendor/yoast/yoastcs/Yoast/Sniffs/ControlStructures/IfElseDeclarationSniff.php"/>
     
-        <rule ref="Generic.WhiteSpace.ScopeIndent">
+    <rule ref="Generic.WhiteSpace.ScopeIndent">
         <properties>
             <property name="ignoreIndentationTokens" type="array" value="T_COMMENT,T_DOC_COMMENT_OPEN_TAG,T_GOTO_LABEL"/>
          </properties>

@@ -73,18 +73,18 @@ function extractCookie($header)
     return null;
 }
 
-function createSessionManager(ASM\Driver $driver)
+function createSessionManager(Asm\Driver $driver)
 {
-    $sessionConfig = new ASM\SessionConfig(
+    $sessionConfig = new Asm\SessionConfig(
         'testSession',
         3600,
         10,
-        $lockMode = ASM\SessionConfig::LOCK_ON_OPEN,
+        $lockMode = Asm\SessionConfig::LOCK_ON_OPEN,
         $lockTimeInMilliseconds = 50000,
         $maxLockWaitTimeMilliseconds = 1000
     );
 
-    return new ASM\SessionManager($sessionConfig, $driver);
+    return new Asm\SessionManager($sessionConfig, $driver);
 }
 
 
