@@ -9,12 +9,15 @@ use Asm\Profile\SimpleProfile;
 use Asm\ValidationConfig;
 use PHPUnit\Framework\TestCase;
 
+use Asm\Session;
+
+
 class SessionCustomBehaviourTest extends TestCase {
 
     /**
-     * @var \Auryn\Provider
+     * @var \Auryn\Injector
      */
-    private $provider;
+    private $injector;
 
     /**
      * @var \Asm\SessionConfig
@@ -27,7 +30,7 @@ class SessionCustomBehaviourTest extends TestCase {
 
 
     protected function setUp() {
-        $this->provider = createProvider();
+        $this->injector = createInjector();
 
         $this->sessionConfig = new SessionConfig(
             'SessionTest',
@@ -43,11 +46,11 @@ class SessionCustomBehaviourTest extends TestCase {
 
         $this->redisOptions = getRedisOptions();
     }
-    
+
     
     /**
      * @param \Asm\ValidationConfig $validationConfig
-     * @param \Asm\SimpleProfile $sessionProfile
+     * @param \Asm\Profile\SimpleProfile $sessionProfile
      * @return SessionManager
      */
 //    function createEmptySession(ValidationConfig $validationConfig = null, SimpleProfile $sessionProfile = null) {
@@ -150,11 +153,11 @@ class SessionCustomBehaviourTest extends TestCase {
 //    }
 
 
-    /**
-     * 
-     */
-    function testChangedUserAgentCallsProfileChanged() {
-
+//    /**
+//     *
+//     */
+//    function testChangedUserAgentCallsProfileChanged() {
+//
 //        $userAgent1 = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.63 Safari/537.36";
 //        $userAgent2 = "Opera/7.50 (Windows ME; U) [en]";
 //
@@ -189,8 +192,8 @@ class SessionCustomBehaviourTest extends TestCase {
 //
 //        $this->setExpectedException('\InvalidArgumentException');
 //        $this->createSecondSession($session1, $validationConfig, $sessionProfile3);
-
-    }
+//
+//    }
 
     /**
      * 
@@ -214,6 +217,12 @@ class SessionCustomBehaviourTest extends TestCase {
 //
 //        $this->assertTrue($invalidCallbackCalled, "Callable for an invalid sessionID was not called.");
 //    }
+
+
+    function testSkipped()
+    {
+        $this->markAsRisky();
+    }
 }
 
  

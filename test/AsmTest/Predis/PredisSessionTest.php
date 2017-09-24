@@ -1,7 +1,7 @@
 <?php
 
 
-namespace AsmTest\Tests\File;
+namespace AsmTest\Predis;
 
 use ASMTest\Tests\AbstractSessionTest;
 use Asm\IdGenerator;
@@ -11,7 +11,7 @@ use Asm\IdGenerator;
  * Class FileSessionTest
  *
  */
-class RedisSessionTest extends AbstractSessionTest
+class PredisSessionTest extends AbstractSessionTest
 {
     /**
      * @return mixed
@@ -23,7 +23,7 @@ class RedisSessionTest extends AbstractSessionTest
         $this->injector->share($idGenerator);
         $this->injector->alias('ASM\IdGenerator', get_class($idGenerator));
 
-        return $this->injector->make('\ASM\Redis\RedisDriver');
+        return $this->injector->make(\Asm\Predis\PredisDriver::class);
     }
     
     

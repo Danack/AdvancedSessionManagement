@@ -6,6 +6,7 @@ use Asm\Encrypter;
 
 /**
  * Interface Driver
+ *
  * This interface is called by the SessionManager. Each session implementation
  * is free to have other functionality as needed.
  * @package ASM
@@ -17,13 +18,18 @@ interface Driver
     /**
      * Open an existing session. Returns either the opened session or null if
      * the session could not be found.
-     * @param $sessionID
+     * @param $sessionID string
      * @param $encrypter Encrypter
      * @param SessionManager $sessionManager
      * @param string|null $userProfile
      * @return Session|null The newly opened session
      */
-    public function openSessionByID($sessionID, Encrypter $encrypter, SessionManager $sessionManager, $userProfile = null);
+    public function openSessionByID(
+        string $sessionID,
+        Encrypter $encrypter,
+        SessionManager $sessionManager,
+        $userProfile = null
+    );
 
     /**
      * Create a new session.

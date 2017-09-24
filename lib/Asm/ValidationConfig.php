@@ -12,6 +12,9 @@ class ValidationConfig
     /**
      * @var callable Which callable to call when the profile has changed. The callable
      * is passed both the profile as it was when the session was generated, and the new profile
+     *
+     * $fn(SessionManager $sessionManager, $newProfile, $existingProfiles);
+     *
      */
     private $profileChanged;
 

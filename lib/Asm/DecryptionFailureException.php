@@ -4,7 +4,7 @@ declare(strict_types = 1);
 
 namespace Asm;
 
-class DecryptionFailureException extends \Exception
+class DecryptionFailureException extends AsmException
 {
 
 }

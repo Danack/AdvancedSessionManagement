@@ -30,12 +30,12 @@ class OpenSslEncrypter implements Encrypter
         return [$this->keyName => base64_encode($this->key) ];
     }
 
-    public static function fromEncodedKey($keyName, $encodedKey)
+    public static function createFromEncodedKey($keyName, $encodedKey)
     {
         return new self($keyName, $encodedKey);
     }
 
-    public static function fromNull($keyName)
+    public static function createNew($keyName)
     {
         $encodedKey = self::generateNewKey();
         return new self($keyName, $encodedKey);

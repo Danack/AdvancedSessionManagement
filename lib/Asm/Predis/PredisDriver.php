@@ -1,6 +1,6 @@
 <?php
 
-namespace Asm\Redis;
+namespace Asm\Predis;
 
 use Asm\AsmException;
 use Asm\Driver;
@@ -8,30 +8,19 @@ use Asm\IdGenerator;
 use Asm\Serializer;
 use Asm\SessionManager;
 use Asm\LostLockException;
+use Asm\Encrypter;
 use Asm\FailedToAcquireLockException;
 use Asm\SessionConfig;
 use Asm\Session;
-use Redis as RedisClient;
 use Asm\RedisKeyGenerator;
+use Asm\Redis\StandardRedisKeyGenerator;
+use Asm\Serializer\PHPSerializer;
+use Predis\Client as RedisClient;
 
-/**
- *
- *
- * SessionDataKey - if this exists the session exists
- *
- * ZombieKey - if this exists, the value it contains is the session ID that replaced
- * the session ID that was destroyed.
- *
- * LockKey - Used to hold implement a lock for the session.
- *
- * Profile key - stores a list of the allowed user-profile strings that can access
- *               this session.
- *
- */
-class RedisDriver implements Driver
+class PredisDriver implements Driver
 {
     /**
-     * @var \Redis
+     * @var \Predis\Client
      */
     private $redisClient;
 
@@ -45,15 +34,12 @@ class RedisDriver implements Driver
      */
     private $serializer;
 
-
     /**
      * @var IdGenerator
      */
     private $idGenerator;
 
-    /**
-     * @var RedisKeyGenerator
-     */
+    /** @var StandardRedisKeyGenerator  */
     private $keyGenerator;
 
     /**
@@ -109,7 +95,7 @@ END;
             $this->serializer = $serializer;
         }
         else {
-            $this->serializer = new \Asm\Serializer\PHPSerializer();
+            $this->serializer = new PHPSerializer();
         }
 
         if ($idGenerator) {
@@ -129,28 +115,28 @@ END;
 
 
     /**
-     * Open an existing session. Returns either the session data or null if
-     * the session could not be found.
-     * @param $sessionId
-     * @param SessionManager $sessionManager
-     * @param null $userProfile
-     * @throws AsmException
-     * @return null|string
+     * @inheritdoc
      */
-    public function openSessionByID($sessionId, SessionManager $sessionManager, $userProfile = null)
-    {
+    public function openSessionByID(
+        string $sessionId,
+        Encrypter $encrypter,
+        SessionManager $sessionManager,
+        $userProfile = null
+    ) {
         $sessionId = (string)$sessionId;
 
         $lockToken = $this->acquireLockIfRequired($sessionId, $sessionManager);
 
         $dataKey = $this->keyGenerator->generateSessionDataKey($sessionId);
-        $dataString = $this->redisClient->get($dataKey);
-        if ($dataString == null) {
+        $encryptedDataString = $this->redisClient->get($dataKey);
+        if ($encryptedDataString == null) {
             if ($lockToken !== null) {
                 $this->releaseLock($sessionId, $lockToken);
             }
             return null;
         }
+
+        $dataString = $encrypter->decrypt($encryptedDataString);
 
         $fullData = $this->serializer->unserialize($dataString);
         $currentProfiles = [];
@@ -170,10 +156,11 @@ END;
             $currentProfiles
         );
 
-        return new RedisSession(
+        return new PredisSession(
             $sessionId,
             $this,
             $sessionManager,
+            $encrypter,
             $data,
             $currentProfiles,
             true,
@@ -181,6 +168,11 @@ END;
         );
     }
 
+    /**
+     * @param $sessionId
+     * @param SessionManager $sessionManager
+     * @return null|string
+     */
     private function acquireLockIfRequired($sessionId, SessionManager $sessionManager)
     {
         $lockToken = null;
@@ -197,12 +189,12 @@ END;
 
     /**
      * Create a new session
-     * @return RedisSession
+     * @return PredisSession
      * @param SessionManager $sessionManager
      * @param null $userProfile
      * @throws AsmException
      */
-    public function createSession(SessionManager $sessionManager, $userProfile = null)
+    public function createSession(Encrypter $encrypter, SessionManager $sessionManager, $userProfile = null)
     {
         $sessionLifeTime = $sessionManager->getSessionConfig()->getLifetime();
         $initialData = [];
@@ -229,10 +221,11 @@ END;
             );
 
             if ($set) {
-                return new RedisSession(
+                return new PredisSession(
                     $sessionId,
                     $this,
                     $sessionManager,
+                    $encrypter,
                     [],
                     $profiles,
                     false,
@@ -261,12 +254,8 @@ END;
         $this->redisClient->del($dataKey);
     }
 
-    /**
-     * @param $sessionID
-     * @param $saveData
-     * @param $existingProfiles
-     */
-    public function save(Session $session, $saveData, $existingProfiles)
+
+    public function save(Session $session, Encrypter $encrypter, $saveData, $existingProfiles)
     {
         $sessionID = $session->getSessionId();
         $sessionLifeTime = 3600; // 1 hour
@@ -277,9 +266,12 @@ END;
 
         $dataKey = $this->keyGenerator->generateSessionDataKey($sessionID);
         $dataString = $this->serializer->serialize($data);
+
+        $encryptedDataString = $encrypter->encrypt($dataString);
+
         $written = $this->redisClient->set(
             $dataKey,
-            $dataString,
+            $encryptedDataString,
             'EX',
             $sessionLifeTime
         );
@@ -306,10 +298,10 @@ END;
         if (!$lockToken) {
             return false;
         }
-
+        
         $lockKey = $this->keyGenerator->generateLockKey($sessionID);
         $storedLockNumber = $this->redisClient->get($lockKey);
-
+        
         if ($storedLockNumber === $lockToken) {
             return true;
         }
@@ -366,7 +358,7 @@ END;
     {
         $lockKey = $this->keyGenerator->generateLockKey($sessionId);
         $result = $this->redisClient->eval(self::UNLOCK_SCRIPT, 1, $lockKey, $lockToken);
-
+        
         // TODO - should
 //        if ($result !== 1) {
 //            throw new LostLockException(
@@ -404,11 +396,137 @@ END;
             $lockToken,
             $lockTimeMS
         );
-
+ 
         if ($result != "OK") {
             throw new LostLockException("Failed to renew lock.");
         }
 
         return $result;
+    }
+    
+
+//
+//    /**
+//     * @param $sessionID
+//     * @return string
+//     */
+//    function findSessionIDFromZombieID($sessionID) {
+//        $zombieKeyName = generateZombieKey($sessionID);
+//        $regeneratedSessionID = $this->redisClient->get($zombieKeyName);
+//
+//        return $regeneratedSessionID;
+//    }
+//
+//
+//    /**
+//     * @param $dyingSessionID
+//     * @param $newSessionID
+//     * @param $zombieTimeMilliseconds
+//     * @return mixed|void
+//     */
+//    function setupZombieID($dyingSessionID,  $zombieTimeMilliseconds) {
+//        $newSessionID = $sessionID = $this->idGenerator->generateSessionID();;
+//        $zombieKey = generateZombieKey($dyingSessionID);
+//        $this->redisClient->set(
+//            $zombieKey,
+//            $newSessionID,
+//            'EX',
+//            $zombieTimeMilliseconds
+//        );
+//
+//        //TODO - combine this operation with the setting of the zombie key to avoid 
+//        //any possibility for a race condition.
+//
+//        //TODO - need to rename all the metadata keys.
+//        // or maybe use RENAMENX ?
+//        $this->redisClient->rename(
+//            generateSessionDataKey($dyingSessionID),
+//            generateSessionDataKey($newSessionID)
+//        );
+//
+//        return $newSessionID;
+//    }
+
+
+
+    /**
+     * @param $sessionID
+     * @param $index
+     * @return int
+     */
+    public function get($sessionID, $index)
+    {
+        $key = $this->keyGenerator->generateAsyncKey($sessionID, $index);
+
+        return $this->redisClient->hget($key, $index);
+    }
+
+
+    /**
+     * @param $sessionID
+     * @param $index
+     * @param $value
+     * @return int
+     */
+    public function set($sessionID, $index, $value)
+    {
+        $key = $this->keyGenerator->generateAsyncKey($sessionID, $index);
+
+        return $this->redisClient->hset($key, $index, $value);
+    }
+
+
+    /**
+     * @param $sessionID
+     * @param $index
+     * @param $increment
+     * @return int
+     */
+    public function increment($sessionID, $index, $increment)
+    {
+        $key = $this->keyGenerator->generateAsyncKey($sessionID, $index);
+
+        return $this->redisClient->hincrby($key, $index, $increment);
+    }
+
+    /**
+     * @param $sessionID
+     * @param $index
+     * @return array
+     */
+    public function getList($sessionID, $index)
+    {
+        $key = $this->keyGenerator->generateAsyncKey($sessionID, $index);
+
+        return $this->redisClient->lrange($key, 0, -1);
+    }
+
+    /**
+     * @param $sessionID
+     * @param $index
+     * @param $value
+     * @return int
+     */
+    public function appendToList($sessionID, $index, $value)
+    {
+        $key = $this->keyGenerator->generateAsyncKey($sessionID, $index);
+        
+        if (is_array($value)) {
+            return $this->redisClient->rpush($key, $value);
+        }
+        else {
+            return $this->redisClient->rpush($key, [$value]);
+        }
+    }
+
+    /**
+     * @param $sessionID
+     * @param $index
+     * @return int
+     */
+    public function clearList($sessionID, $index)
+    {
+        $key = $this->keyGenerator->generateAsyncKey($sessionID, $index);
+        return $this->redisClient->del($key);
     }
 }

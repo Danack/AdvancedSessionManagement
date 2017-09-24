@@ -9,12 +9,12 @@ use Asm\Session;
 use Asm\SessionManager;
 use Asm\LostLockException;
 
-class RedisSession implements Session
+class PredisSession implements Session
 {
     protected $sessionId = null;
 
     /**
-     * @var RedisDriver
+     * @var PredisDriver
      */
     protected $redisDriver;
 
@@ -43,7 +43,7 @@ class RedisSession implements Session
 
     public function __construct(
         $sessionID,
-        RedisDriver $redisDriver,
+        PredisDriver $redisDriver,
         SessionManager $sessionManager,
         Encrypter $encrypter,
         array $data,
@@ -87,6 +87,7 @@ class RedisSession implements Session
         $httpOnly = true
     ) {
         return $this->sessionManager->getHeaders(
+            $this->encrypter,
             $this->sessionId,
             $privacy,
             $domain,

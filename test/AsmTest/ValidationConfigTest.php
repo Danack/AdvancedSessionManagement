@@ -15,7 +15,7 @@ class ValidationConfigTest extends TestCase {
 
     function testBasic()
     {
-        $profileChanged = function($this, $userProfile, $sessionProfiles) {
+        $profileChanged = function(SessionManager $session, $userProfile, $sessionProfiles) {
         };
         $zombieKeyAccessed = function(SessionManager $session) {
         };

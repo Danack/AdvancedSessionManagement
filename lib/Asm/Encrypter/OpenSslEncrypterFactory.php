@@ -24,10 +24,9 @@ class OpenSslEncrypterFactory implements EncrypterFactory
     {
         $encodedKey = null;
         if (array_key_exists($this->cookieName, $cookies) === true) {
-
-            return OpenSslEncrypter::fromEncodedKey($this->cookieName, $cookies[$this->cookieName]);
+            return OpenSslEncrypter::createFromEncodedKey($this->cookieName, $cookies[$this->cookieName]);
         }
 
-        return OpenSslEncrypter::fromNull($this->cookieName);
+        return OpenSslEncrypter::createNew($this->cookieName);
     }
 }

@@ -89,59 +89,57 @@ class SessionManager implements CookieGenerator
         return $this->sessionConfig->getLockMode();
     }
 
+    /**
+     * Opens the session, if and only if there is a valid session id
+     * in the cookies in the request.
+     * @param ServerRequest $request
+     * @param null $userProfile
+     * @return Session|null
+     */
     public function openSessionFromCookie(ServerRequest $request, $userProfile = null)
     {
         $cookieData = $request->getCookieParams();
-
         $encrypter = $this->encrypterFactory->create($cookieData);
         if (!array_key_exists($this->sessionConfig->getSessionName(), $cookieData)) {
             return null;
         }
 
         $sessionID = $cookieData[$this->sessionConfig->getSessionName()];
-
-        $existingSession = $this->openSessionByID($sessionID, $encrypter, $userProfile);
-        
-        if ($existingSession == null) {
-            return $this->driver->createSession($encrypter, $this, $userProfile);
-        }
-        
-        return $existingSession;
-    }
-
-    /**
-     * Opens an existing session.
-     *
-     * Opens and returns the data for an existing session, if and only if the
-     * client sent a valid existing session ID. Otherwise returns null.
-     *
-     * @param string $sessionID
-     * @param null $userProfile
-     * @return Session|null
-     */
-    protected function openSessionByID(string $sessionID, Encrypter $encrypter, string $userProfile = null)
-    {
         $session = $this->driver->openSessionByID(
             $sessionID,
             $encrypter,
             $this,
             $userProfile
         );
-        
-        if ($session == null) {
-            $this->invalidSessionAccessed();
+
+        if ($session != null) {
+            return $session;
+        }
+        $this->invalidSessionAccessed();
+
+        return null;
+    }
+
+    /**
+     * Call the invalidSessionAccessed callable, if one is set.
+     */
+    private function invalidSessionAccessed()
+    {
+        $invalidSessionAccessed = $this->validationConfig->getInvalidSessionAccessedCallable();
+
+        if (!$invalidSessionAccessed) {
+            return;
         }
 
-        return $session;
+        call_user_func($invalidSessionAccessed, $this);
     }
 
     /**
      * Create a new session or open existing session.
      *
-     * Opens and returns the data for an existing session, if and only if the
+     * Opens and returns the data for an existing session, if the
      * client sent a valid existing session ID. Otherwise creates a new session.
      *
-
      * @param ServerRequest $request
      * @param null $userProfile
      * @return
@@ -149,20 +147,24 @@ class SessionManager implements CookieGenerator
     public function createSession(ServerRequest $request, $userProfile = null)
     {
         $cookieData = $request->getCookieParams();
-
         $encrypter = $this->encrypterFactory->create($cookieData);
 
         if (!array_key_exists($this->sessionConfig->getSessionName(), $cookieData)) {
-            return $this->driver->createSession($encrypter,$this, $userProfile);
+            return $this->driver->createSession($encrypter, $this, $userProfile);
         }
 
         $sessionID = $cookieData[$this->sessionConfig->getSessionName()];
-        $existingSession = $this->openSessionByID($sessionID, $encrypter, $userProfile);
+        $session = $this->driver->openSessionByID(
+            $sessionID,
+            $encrypter,
+            $this,
+            $userProfile
+        );
 
-        if ($existingSession !== null) {
-            return $existingSession;
+        if ($session !== null) {
+            return $session;
         }
-        
+
         $this->invalidSessionAccessed();
 
         return $this->driver->createSession($encrypter, $this, $userProfile);
@@ -328,19 +330,6 @@ class SessionManager implements CookieGenerator
 //        $this->driver->forceReleaseLock($this->sessionID);
 //    }
 
-    /**
-     *
-     */
-    private function invalidSessionAccessed()
-    {
-        $invalidSessionAccessed = $this->validationConfig->getInvalidSessionAccessedCallable();
-
-        if (!$invalidSessionAccessed) {
-            return;
-        }
-
-        call_user_func($invalidSessionAccessed, $this);
-    }
 
     /**
      * @param $newProfile
@@ -425,6 +414,7 @@ class SessionManager implements CookieGenerator
      * @throws AsmException
      */
     public function getHeaders(
+        Encrypter $encrypter,
         $sessionId,
         $privacy,
         $domain,
@@ -435,7 +425,7 @@ class SessionManager implements CookieGenerator
         $time = time();
 
         $headers = [];
-        $headers["Set-Cookie"] = ASM::generateCookieHeaderString(
+        $headers[] = ["Set-Cookie", Asm::generateCookieHeaderString(
             $time,
             $this->sessionConfig->getSessionName(),
             $sessionId,
@@ -444,14 +434,25 @@ class SessionManager implements CookieGenerator
             $domain,
             $secure,
             $httpOnly
-        );
+        )];
 
+        $cachingHeader = ASM::getCacheControlPrivacyHeader($privacy);
+        $headers[] = $cachingHeader;
 
-        $cachingHeaders = ASM::getCacheControlPrivacyHeader(
-            $privacy
-        );
+        $encryptionCookieHeaders = $encrypter->getCookieHeaders();
 
-        $headers = array_merge($headers, $cachingHeaders);
+        foreach ($encryptionCookieHeaders as $name => $value) {
+            $headers[] = ["Set-Cookie", Asm::generateCookieHeaderString(
+                $time,
+                $name,
+                $value,
+                $this->sessionConfig->getLifetime(),
+                $path,
+                $domain,
+                $secure,
+                $httpOnly
+            )];
+        }
 
         return $headers;
     }

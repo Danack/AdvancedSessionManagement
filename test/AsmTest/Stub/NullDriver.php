@@ -5,6 +5,7 @@ namespace AsmTest\Stub;
 
 use Asm\AsmException;
 use Asm\Driver;
+use Asm\Encrypter;
 use Asm\Session;
 use Asm\SessionManager;
 
@@ -19,7 +20,7 @@ class NullDriver implements Driver
      * @param null $userProfile
      * @return Session|null The newly opened session
      */
-    function openSessionByID($sessionID, SessionManager $sessionManager, $userProfile = null)
+    function openSessionByID(string $sessionID, Encrypter $encrypter, SessionManager $sessionManager, $userProfile = null)
     {
         throw new \Exception("Not implemented");
     }
@@ -30,7 +31,7 @@ class NullDriver implements Driver
      * @param null $userProfile
      * @return Session The newly opened session.
      */
-    function createSession(SessionManager $sessionManager, $userProfile = null)
+    public function createSession(Encrypter $encrypter, SessionManager $sessionManager, $userProfile = null)
     {
         throw new \Exception("Not implemented");
     }

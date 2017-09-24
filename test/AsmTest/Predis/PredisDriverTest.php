@@ -1,23 +1,24 @@
 <?php
 
-namespace AsmTest\Tests;
+namespace AsmTest\Predis;
 
 use Asm\LostLockException;
+use AsmTest\Tests\AbstractDriverTest;
 
 /**
  * Class RedisDriverTest
  *
  */
-class RedisDriverTest extends AbstractDriverTest {
+class PredisDriverTest extends AbstractDriverTest {
 
     /**
-     * @return \Asm\Redis\RedisDriver
+     * @return \Asm\Predis\PredisDriver
      */
     function getDriver() {
-        $redisClient = $this->injector->make('Predis\Client');
+        $redisClient = $this->injector->make(\Predis\Client::class);
         checkClient($redisClient, $this);
 
-        return $this->injector->make('ASM\Redis\RedisDriver');
+        return $this->injector->make(\Asm\Predis\PredisDriver::class);
     }
 
     /**

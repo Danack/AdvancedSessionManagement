@@ -2,10 +2,12 @@
 
 namespace AsmTest\Tests;
 
+use Asm\Encrypter\NullEncrypter;
 use Asm\SessionConfig;
 use Asm\SessionManager;
 use Asm\LostLockException;
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Assert;
 
 abstract class AbstractDriverTest extends TestCase {
 
@@ -15,7 +17,7 @@ abstract class AbstractDriverTest extends TestCase {
     protected $injector;
 
     protected function setUp() {
-        $this->injector = createProvider();
+        $this->injector = createInjector();
     }
 
     /**
@@ -28,7 +30,8 @@ abstract class AbstractDriverTest extends TestCase {
     {
         $driver = $this->getDriver();
         $sessionManager = createSessionManager($driver);
-        $driver->openSessionByID("12346", $sessionManager);
+        $encrypter = new NullEncrypter();
+        $driver->openSessionByID("12346", $encrypter, $sessionManager);
     }
     
     function testBasicOpeningDeleting()
@@ -45,9 +48,9 @@ abstract class AbstractDriverTest extends TestCase {
         );
 
         $sessionManager = new SessionManager($sessionConfig, $driver);
-        $session = $driver->createSession($sessionManager);
+        $session = $driver->createSession(new NullEncrypter(), $sessionManager);
         $this->assertInstanceOf('ASM\Session', $session);
-        $duplicateSession1 = $driver->openSessionByID($session->getSessionId(), $sessionManager);
+        $duplicateSession1 = $driver->openSessionByID($session->getSessionId(), new NullEncrypter(), $sessionManager);
         $this->assertInstanceOf('ASM\Session', $duplicateSession1);
         
         $this->assertEquals(
@@ -56,7 +59,7 @@ abstract class AbstractDriverTest extends TestCase {
         );
         
         $driver->deleteSessionByID($session->getSessionId());
-        $deletedSession = $driver->openSessionByID($session->getSessionId(), $sessionManager);
+        $deletedSession = $driver->openSessionByID($session->getSessionId(), new NullEncrypter(), $sessionManager);
         $this->assertNull($deletedSession);
     }
     
@@ -75,12 +78,12 @@ abstract class AbstractDriverTest extends TestCase {
         );
 
         $sessionManager = new SessionManager($sessionConfig, $driver);
-        $session = $driver->createSession($sessionManager);
-        $this->assertInstanceOf('ASM\Session', $session);
-        
-        $this->setExpectedException('ASM\FailedToAcquireLockException');
+        $session = $driver->createSession(new NullEncrypter(), $sessionManager);
+        Assert::assertInstanceOf('ASM\Session', $session);
+
+        $this->expectException(\ASM\FailedToAcquireLockException::class);
         //This will throw an exception as the previous session instance is still open.
-        $duplicateSession1 = $driver->openSessionByID($session->getSessionId(), $sessionManager);
+        $duplicateSession1 = $driver->openSessionByID($session->getSessionId(), new NullEncrypter(), $sessionManager);
     }
 
     /**
@@ -100,11 +103,11 @@ abstract class AbstractDriverTest extends TestCase {
         );
 
         $sessionManager = new SessionManager($sessionConfig, $driver);
-        $session = $driver->createSession($sessionManager);
+        $session = $driver->createSession(new NullEncrypter(), $sessionManager);
         $this->assertInstanceOf('ASM\Session', $session);
         $driver->forceReleaseLockByID($session->getSessionId());
 
-        $duplicateSession1 = $driver->openSessionByID($session->getSessionId(), $sessionManager);
+        $duplicateSession1 = $driver->openSessionByID($session->getSessionId(), new NullEncrypter(), $sessionManager);
         $this->assertInstanceOf('ASM\Session', $duplicateSession1);
         
         $lockValid = $session->validateLock();
@@ -127,7 +130,7 @@ abstract class AbstractDriverTest extends TestCase {
             100
         );
         $sessionManager = new SessionManager($sessionConfig, $driver);
-        $openSession = $driver->createSession($sessionManager);
+        $openSession = $driver->createSession(new NullEncrypter(), $sessionManager);
         $sessionID = $openSession->getSessionId();
 
         //This will release the lock. 
@@ -135,7 +138,7 @@ abstract class AbstractDriverTest extends TestCase {
         $openSession = null;
         
         //This should work instantly as the lock should have been released by the destruct.
-        $openSession = $driver->openSessionByID($sessionID, $sessionManager);
+        $openSession = $driver->openSessionByID($sessionID, new NullEncrypter(), $sessionManager);
     }
 
     /**
@@ -154,7 +157,7 @@ abstract class AbstractDriverTest extends TestCase {
             100
         );
         $sessionManager = new SessionManager($sessionConfig, $driver);
-        $openSession = $driver->createSession($sessionManager);
+        $openSession = $driver->createSession(new NullEncrypter(), $sessionManager);
         $openSession->renewLock($lockTimeinMS);
     }
 
@@ -176,7 +179,7 @@ abstract class AbstractDriverTest extends TestCase {
         
         
         $sessionManager = new SessionManager($sessionConfig, $driver);
-        $openSession = $driver->createSession($sessionManager);
+        $openSession = $driver->createSession(new NullEncrypter(), $sessionManager);
         $openSession->acquireLock($lockTimeinMS, 100);
 
         //Sleep long enough for the lock to expire.
@@ -184,6 +187,7 @@ abstract class AbstractDriverTest extends TestCase {
 
         $duplicateSession = $driver->openSessionByID(
             $openSession->getSessionId(),
+            new NullEncrypter(),
             $sessionManager
         );
 

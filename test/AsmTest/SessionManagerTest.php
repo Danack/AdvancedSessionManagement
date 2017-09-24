@@ -6,11 +6,11 @@ namespace AsmTest;
 use Asm\SessionManager;
 use Asm\SessionConfig;
 use Asm\ValidationConfig;
-use ASMTest\Stub\NullDriver;
+use AsmTest\Stub\NullDriver;
 
 use Asm\AsmException;
 use PHPUnit\Framework\TestCase;
-use Predis\Client as RedisClient;
+use Zend\Diactoros\ServerRequest;
 
 class SessionManagerTest extends TestCase {
 
@@ -51,7 +51,7 @@ class SessionManagerTest extends TestCase {
     
 
     protected function setUp() {
-        $this->provider = createProvider();
+        $this->provider = createInjector();
 
         $this->sessionConfig = new SessionConfig(
             'SessionTest',
@@ -84,15 +84,16 @@ class SessionManagerTest extends TestCase {
 //        $this->assertEmpty($readSessionData);
 //    }
 
-    function testEmpty() {
-
-    }
-    
+//    function testEmpty() {
+//
+//    }
+//
     
     function testOpenSessionFromCookieNoData()
     {
+        $serverRequest = new ServerRequest();
         $sessionManager = new SessionManager($this->sessionConfig, new NullDriver());
-        $session = $sessionManager->openSessionFromCookie([]);
+        $session = $sessionManager->openSessionFromCookie($serverRequest);
         $this->assertNull($session);
     }
     
@@ -100,11 +101,10 @@ class SessionManagerTest extends TestCase {
     function testBadUserProfileComprison()
     {
         $sessionManager = new SessionManager($this->sessionConfig, new NullDriver());
-        $this->setExpectedException(
-            'ASM\AsmException',
-            '',
-            AsmException::BAD_ARGUMENT
-        );
+        $this->expectException(\Asm\AsmException::class);
+        $this->expectExceptionCode(AsmException::BAD_ARGUMENT);
+
+
         $sessionManager->performProfileSecurityCheck(
             new \StdClass,
             []
@@ -164,11 +164,8 @@ class SessionManagerTest extends TestCase {
         );
         $existingProfiles = ["ExistingProfile"];
         
-        $this->setExpectedException(
-            'ASM\AsmException',
-            '',
-            AsmException::BAD_ARGUMENT
-        );
+        $this->expectException(\ASM\AsmException::class);
+        $this->expectExceptionCode(AsmException::BAD_ARGUMENT);
         $returnValue = $sessionManager->performProfileSecurityCheck(
             'NewUAProfile',
             $existingProfiles

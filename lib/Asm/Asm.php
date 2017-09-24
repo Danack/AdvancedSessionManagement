@@ -33,13 +33,13 @@ class Asm
             return [];
         }
 
-        return ['Cache-Control' => $cacheHeaderInfo[$caching]];
+        return ['Cache-Control', $cacheHeaderInfo[$caching]];
     }
 
     /**
      * @param $time
-     * @param $sessionName
-     * @param $sessionID
+     * @param $cookieName
+     * @param $cookieValue
      * @param $lifetime
      * @param null $path
      * @param bool $domain
@@ -49,8 +49,8 @@ class Asm
      */
     public static function generateCookieHeaderString(
         $time,
-        $sessionName,
-        $sessionID,
+        $cookieName,
+        $cookieValue,
         $lifetime,
         $path = null,
         $domain = false,
@@ -65,7 +65,7 @@ class Asm
         $COOKIE_HTTPONLY = "; httpOnly";
 
         $headerString = "";
-        $headerString .= $sessionName.'='.$sessionID;
+        $headerString .= $cookieName.'='.$cookieValue;
 
         $expireTime = $time + $lifetime;
         $expireDate = date("D, d M Y H:i:s T", $expireTime);

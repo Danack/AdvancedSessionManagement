@@ -7,7 +7,7 @@
 
     <testsuites>
         <testsuite name="AdvancedSessionManagement">
-            <directory>../test/ASMTest/</directory>
+            <directory>../test/AsmTest/</directory>
         </testsuite>
     </testsuites>
 
@@ -17,9 +17,8 @@
             <directory>./src/Intahwebz/ASM/Tests/</directory>
         </blacklist> -->
         <whitelist>
-            <directory>../lib/ASM</directory>
+            <directory>../lib/Asm</directory>
             <exclude>
-                <!-- <file>./src/Intahwebz/Jig/Converter/TemplatePrinter.php</file> -->
             </exclude>
         </whitelist>
     </filter>

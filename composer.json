@@ -15,7 +15,8 @@
         "psr/http-message": "^1.0",
         "rdlowrey/auryn": "^v1.4.2",
         "squizlabs/php_codesniffer": "^2.8",
-        "yoast/yoastcs": "0.4.2"
+        "yoast/yoastcs": "0.4.2",
+        "zendframework/zend-diactoros": "1.6.0"
     },
     "require": {
         "ircmaxell/random-lib": "^1.1.0",

@@ -4,10 +4,6 @@ use Predis\Client as RedisClient;
 
 $autoloader = require(__DIR__.'/../vendor/autoload.php');
 
-/** @var $autoloader \Composer\Autoload\ClassLoader */
-$autoloader->add('ASM', __DIR__);
-$autoloader->add('ASM\Tests', __DIR__);
-
 require_once __DIR__."/mockFunctions.php";
 
 function getRedisConfig()
@@ -15,7 +11,8 @@ function getRedisConfig()
     $redisConfig = array(
         "scheme" => "tcp",
         "host" => 'localhost',
-        "port" => 6379
+        "port" => 6379,
+        "password" => "rwEt5wme1cyvpzAE7DFt9SL2mluHqFPG"
     );
 
     return $redisConfig;
@@ -62,11 +59,12 @@ function extractCookie($header)
 {
     if (stripos($header, 'Set-Cookie') === 0) {
         $matches = array();
-        $regex = "/Set-Cookie: (\w*)=(\w*);.*/";
+        // TODO - double-check what characters are allowed to be used as keys and values.
+        $regex = '/Set-Cookie: ([A-Za-z0-9_]*)=([^;]*);.*/';
         $count = preg_match($regex, $header, $matches, PREG_OFFSET_CAPTURE);
 
         if ($count == 1) {
-            return array($matches[1][0] => $matches[2][0]);
+            return array($matches[1][0], $matches[2][0]);
         }
     }
 
@@ -93,10 +91,9 @@ function createSessionManager(Asm\Driver $driver)
  * @param array $shares
  * @return \Auryn\Injector
  */
-function createProvider($mocks = array(), $shares = array())
+function createInjector($mocks = array(), $shares = array())
 {
     $standardImplementations = [
-        //'Intahwebz\Session' => Intahwebz\Session\MockSession::class,
     ];
 
     $injector = new \Auryn\Injector();
@@ -154,7 +151,7 @@ function createProvider($mocks = array(), $shares = array())
     return $injector;
 }
 
-function checkClient($redisClient, \PHPUnit_Framework_TestCase $test)
+function checkClient($redisClient, \PHPUnit\Framework\TestCase $test)
 {
     try {
         /** @var $redisClient \Predis\Client */
@@ -167,4 +164,25 @@ function checkClient($redisClient, \PHPUnit_Framework_TestCase $test)
         echo "exception :".$e->getMessage()."\n";
         $test->markTestSkipped("Redis unavailable");
     }
+}
+
+
+function createRequestFromSessionResponseHeaders(\Asm\Session $session)
+{
+    $headers = $session->getHeaders(\Asm\SessionManager::CACHE_PRIVATE);
+    $cookies = [];
+
+    foreach ($headers as $headerLine) {
+        list($key, $value) = $headerLine;
+        $extractedCookie = extractCookie($key . ": ". $value);
+        if ($extractedCookie !== null) {
+            list ($cookieName, $value) = $extractedCookie;
+            $cookies[$cookieName] = $value;
+        }
+    }
+
+    $request = new \Zend\Diactoros\ServerRequest();
+    $request = $request->withCookieParams($cookies);
+
+    return $request;
 }

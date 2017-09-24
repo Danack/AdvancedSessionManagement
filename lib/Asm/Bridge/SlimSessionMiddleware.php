@@ -35,15 +35,14 @@ class SlimSessionMiddleware
         $headers = $session->getHeaders(
             \Asm\SessionManager::CACHE_PRIVATE,
             '/'
-
-//        $domain = false,
-//        $secure = false,
-//        $httpOnly = true
+            //        $domain = false,
+            //        $secure = false,
+            //        $httpOnly = true
         );
 
         foreach ($headers as $key => $value) {
             /** @var $response \Psr\Http\Message\ResponseInterface */
-            $response = $response->withHeader($key, $value);
+            $response = $response->withAddedHeader($key, $value);
         }
 
         return $response;
