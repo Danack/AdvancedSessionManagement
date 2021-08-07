@@ -2,7 +2,6 @@
 
 namespace AsmTest\Tests;
 
-
 use Asm\Serializer\PHPSerializer;
 use Asm\Serializer\JsonSerializer;
 use PHPUnit\Framework\TestCase;
@@ -11,17 +10,19 @@ use PHPUnit\Framework\TestCase;
  * Class SerializerTest
  *
  */
-class SerializerTest extends TestCase {
+class SerializerTest extends TestCase
+{
 
     /**
      * Basic Serialization functionality
-     * 
+     *
      */
-    function testPHPSerializer() {        
+    function testPHPSerializer()
+    {
         $serializer = new PHPSerializer();
         
         $tests = [
-            ['foo'],    
+            ['foo'],
             ['foo' => 'bar'],
             ['foo' => new \StdClass()]
         ];
@@ -35,14 +36,14 @@ class SerializerTest extends TestCase {
     
         /**
      * Basic Serialization functionality
-     * 
+     *
      */
     function testJSONSerializer()
     {
         $serializer = new JsonSerializer();
 
         $tests = [
-            ['foo'],    
+            ['foo'],
             ['foo' => 'bar'],
             //['foo' => new \StdClass()]
         ];
@@ -54,8 +55,3 @@ class SerializerTest extends TestCase {
         }
     }
 }
-
-
-
-
- 

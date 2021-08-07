@@ -9,16 +9,20 @@
         }
     ],
     "require-dev": {
-        "mikey179/vfsStream": "1.5.0",
-        "phpunit/phpunit": "6.3.1",
+        "danack/coding-standard": "0.3.0",
+        "mikey179/vfsstream": "1.5.0",
+        "infection/infection": "^0.23.0",
+        "laminas/laminas-diactoros": "^2.6",
+        "phpunit/phpunit": "9.5.6",
+        "phpstan/phpstan-strict-rules": "^0.12.9",
         "predis/predis": "^v1.1.1",
         "psr/http-message": "^1.0",
         "rdlowrey/auryn": "^v1.4.2",
-        "squizlabs/php_codesniffer": "^2.8",
-        "yoast/yoastcs": "0.4.2",
-        "zendframework/zend-diactoros": "1.6.0"
+        "squizlabs/php_codesniffer": "^3.6.0",
+        "yoast/yoastcs": "1.0"
     },
     "require": {
+        "php" : "^8.0",
         "ircmaxell/random-lib": "^1.1.0",
         "ext-openssl": "*",
         "ext-mbstring": "*"

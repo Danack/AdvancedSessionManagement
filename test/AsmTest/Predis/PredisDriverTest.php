@@ -9,12 +9,14 @@ use AsmTest\Tests\AbstractDriverTest;
  * Class RedisDriverTest
  *
  */
-class PredisDriverTest extends AbstractDriverTest {
+class PredisDriverTest extends AbstractDriverTest
+{
 
     /**
      * @return \Asm\Predis\PredisDriver
      */
-    function getDriver() {
+    function getDriver()
+    {
         $redisClient = $this->injector->make(\Predis\Client::class);
         checkClient($redisClient, $this);
 
@@ -34,7 +36,7 @@ class PredisDriverTest extends AbstractDriverTest {
             $driver->renewLock($sessionID, "WrongToken", 100000);
             $this->fail("Renewing a lock acquired elsewhere lost failed to fail");
         }
-        catch(LostLockException $lle) {
+        catch (LostLockException $lle) {
             //This is expected behaviour.
         }
     }

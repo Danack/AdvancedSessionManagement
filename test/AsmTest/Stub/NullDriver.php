@@ -53,6 +53,4 @@ class NullDriver implements Driver
     {
         throw new \Exception("Not implemented");
     }
-
-
 }

@@ -8,10 +8,9 @@ use Asm\Encrypter;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Assert;
 
-
 abstract class AbstractEncrypterTest extends TestCase
 {
-    public abstract function getEncrypter() : Encrypter;
+    abstract public function getEncrypter() : Encrypter;
 
     public function testEncryptThenDecrypt()
     {

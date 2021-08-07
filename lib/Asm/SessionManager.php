@@ -173,12 +173,12 @@ class SessionManager implements CookieGenerator
 
 
 //    /**
-//     * 
+//     *
 //     */
 //    function regenerateSessionID() {
 //        $newSessionID = $this->makeSessionKey();
 //        $zombieTime = $this->sessionConfig->getZombieTime();
-//        
+//
 //        if ($zombieTime > 0) {
 //            $this->driver->setupZombieID(
 //                $this->sessionID,
@@ -227,7 +227,7 @@ class SessionManager implements CookieGenerator
 //    /**
 //     * A zombie key was detected. If the user
 //     */
-//    private function zombieKeyDetected() { 
+//    private function zombieKeyDetected() {
 //        $zombieKeyAccessedCallable = $this->validationConfig->getZombieKeyAccessedCallable();
 //
 //        if (!$zombieKeyAccessedCallable) {
@@ -238,7 +238,7 @@ class SessionManager implements CookieGenerator
 //    }
 
 //    /**
-//     * 
+//     *
 //     */
 //    public function saveData($saveData) {
 //        $this->driver->save($this->sessionID, $saveData);
@@ -251,7 +251,7 @@ class SessionManager implements CookieGenerator
 //        if ($this->sessionID == null) {
 //            throw new AsmException("Cannot acquire lock, session is not open.");
 //        }
-//        
+//
 //        $totalTimeWaitedForLock = 0;
 //
 //        do {
@@ -265,15 +265,15 @@ class SessionManager implements CookieGenerator
 //                throw new FailedToAcquireLockException("Failed to acquire lock for session data after
 // time $totalTimeWaitedForLock ");
 //            }
-//            
+//
 //            if (!$lockAcquired) {
 //                //Wait one millisecond to prevent hammering driver.
 //                //TODO - change to random sleep time?
-//                usleep(self::lockSleepTime); 
+//                usleep(self::lockSleepTime);
 //            }
-//            
+//
 //            $totalTimeWaitedForLock += self::lockSleepTime;
-//            
+//
 //        } while(!$lockAcquired);
 //    }
 
@@ -284,7 +284,7 @@ class SessionManager implements CookieGenerator
 //     */
 //    function releaseLock() {
 //        $lockReleased = $this->driver->releaseLock($this->sessionID);
-//        
+//
 //        if (!$lockReleased) {
 //            // lock was force removed by a different script, or this script went over
 //            // the $this->sessionConfig->lockTime Either way - bad things are likely to happen
@@ -300,14 +300,14 @@ class SessionManager implements CookieGenerator
 //
 //            throw new LockAlreadyReleasedException("The lock for the session has already been released.");
 //        }
-//        
+//
 //        return true;
 //    }
 
 //    /**
 //     * Renews a lock. This allows long running operations to keep a lock open longer
 //     * than the SessionConfig::$lockMilliSeconds time. If the lock fails to be renewed
-//     * an exception is thrown. This can happen when another process force releases a 
+//     * an exception is thrown. This can happen when another process force releases a
 //     * lock.
 //     * @throws FailedToAcquireLockException
 //     */
@@ -323,7 +323,7 @@ class SessionManager implements CookieGenerator
 //    }
 
 //    /**
-//     * 
+//     *
 //     */
 //    function forceReleaseLock() {
 //        //TODO - should this only be callable after the session is started?

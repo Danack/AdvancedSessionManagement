@@ -10,9 +10,10 @@ use AsmTest\Stub\NullDriver;
 
 use Asm\AsmException;
 use PHPUnit\Framework\TestCase;
-use Zend\Diactoros\ServerRequest;
+use Laminas\Diactoros\ServerRequest;
 
-class SessionManagerTest extends TestCase {
+class SessionManagerTest extends TestCase
+{
 
     /**
      * @var \Auryn\Injector
@@ -50,7 +51,8 @@ class SessionManagerTest extends TestCase {
 //    }
     
 
-    protected function setUp() {
+    protected function setUp(): void
+    {
         $this->provider = createInjector();
 
         $this->sessionConfig = new SessionConfig(
@@ -62,7 +64,7 @@ class SessionManagerTest extends TestCase {
 
         $this->redisOptions = getRedisOptions();
 
-        //$session = $this->provider->make(\ASM\Session::class);        
+        //$session = $this->provider->make(\ASM\Session::class);
         //$this->provider->share($sessionConfig);
     }
 
@@ -74,7 +76,7 @@ class SessionManagerTest extends TestCase {
 //        $session1->close();
 //
 //        $redisClient = new RedisClient($this->redisConfig, $this->redisOptions);
-//        
+//
 //        $sessionManager = new SessionManager($this->sessionConfig, $redisClient);
 //        $sessionManager->deleteSession($session1->getSessionID());
 //
@@ -130,7 +132,6 @@ class SessionManagerTest extends TestCase {
     function testUserProfileChangedCoverage2()
     {
         $fn = function () {
-
         };
         $validationConfig = new ValidationConfig(
             $fn
@@ -171,7 +172,4 @@ class SessionManagerTest extends TestCase {
             $existingProfiles
         );
     }
-    
-    
-    
 }

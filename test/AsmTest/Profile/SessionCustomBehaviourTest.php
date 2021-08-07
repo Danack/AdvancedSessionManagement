@@ -8,11 +8,10 @@ use Asm\SessionConfig;
 use Asm\Profile\SimpleProfile;
 use Asm\ValidationConfig;
 use PHPUnit\Framework\TestCase;
-
 use Asm\Session;
 
-
-class SessionCustomBehaviourTest extends TestCase {
+class SessionCustomBehaviourTest extends TestCase
+{
 
     /**
      * @var \Auryn\Injector
@@ -29,7 +28,8 @@ class SessionCustomBehaviourTest extends TestCase {
     private $redisOptions;
 
 
-    protected function setUp() {
+    protected function setUp(): void
+    {
         $this->injector = createInjector();
 
         $this->sessionConfig = new SessionConfig(
@@ -83,7 +83,7 @@ class SessionCustomBehaviourTest extends TestCase {
 
 
     /**
-     * 
+     *
      */
 //    function testZombieSessionRegeneration() {
 //        $session1 = $this->createEmptySession();
@@ -109,7 +109,7 @@ class SessionCustomBehaviourTest extends TestCase {
 //    }
 
     /**
-     * 
+     *
      */
 //    function testZombieSessionDetected() {
 //        $session1 = $this->createEmptySession();
@@ -126,7 +126,7 @@ class SessionCustomBehaviourTest extends TestCase {
 //        $redisClient2 = new RedisClient($this->redisConfig, $this->redisOptions);
 //        $mockCookies2 = array_merge(array(), $cookie);
 //        //Session 2 will now try to open a zombie session.
-//        
+//
 //
 //        $sessionConfig = new SessionConfig(
 //            'SessionTest',
@@ -134,8 +134,8 @@ class SessionCustomBehaviourTest extends TestCase {
 //            60,
 //            SessionConfig::LOCK_ON_WRITE
 //        );
-//        
-//        
+//
+//
 //        $session2 = new Session($sessionConfig, Session::READ_ONLY, $mockCookies2, $redisClient2);
 //        $session2->start();
 //        $zombieDetectedCallback = false;
@@ -196,7 +196,7 @@ class SessionCustomBehaviourTest extends TestCase {
 //    }
 
     /**
-     * 
+     *
      */
 //    function testInvalidSessionCalled() {
 //        $mockCookies2 = array();
@@ -224,5 +224,3 @@ class SessionCustomBehaviourTest extends TestCase {
         $this->markAsRisky();
     }
 }
-
- 

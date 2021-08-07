@@ -11,4 +11,3 @@ class XKCDIDGenerator implements IdGenerator
         return "4";
     }
 }
-

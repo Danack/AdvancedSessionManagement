@@ -17,7 +17,6 @@ namespace {
     }
 }
 
-
 namespace Asm\File {
 
     function file_put_contents($filename, $data, $flags = 0, $context = null)
@@ -111,7 +110,3 @@ namespace Asm\File {
 namespace Asm\Redis {
 
 }
-
-
-
-

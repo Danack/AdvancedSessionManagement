@@ -6,7 +6,6 @@ namespace AsmTest\Predis;
 use ASMTest\Tests\AbstractSessionTest;
 use Asm\IdGenerator;
 
-
 /**
  * Class FileSessionTest
  *
@@ -73,13 +72,13 @@ class PredisSessionTest extends AbstractSessionTest
 //     */
 //    function testUnwriteable()
 //    {
-//        
-//        $vfsStreamDirectory = vfsStream::newDirectory('sessionTest', 0);        
+//
+//        $vfsStreamDirectory = vfsStream::newDirectory('sessionTest', 0);
 //        $path = $vfsStreamDirectory->url();
 //        $fileDriver = $this->injector->make('ASM\File\FileDriver', [':path' => $path]);
 //
 //        $sessionManager = createSessionManager($fileDriver);
 //        $this->setExpectedException('ASM\AsmException');
 //        $fileDriver->createSession($sessionManager);
-//    }    
+//    }
 }

@@ -7,9 +7,10 @@ namespace AsmTest\Tests;
 use Asm\Profile\SimpleProfile;
 use PHPUnit\Framework\TestCase;
 
-class SimpleProfileTest extends TestCase {
+class SimpleProfileTest extends TestCase
+{
 
-    function testBasic()
+    function testBasic(): void
     {
         $userAgent = 'TestUserAgent';
         $ipAddress = '1.2.3.4';
@@ -28,4 +29,3 @@ class SimpleProfileTest extends TestCase {
         $this->assertEquals($ipAddress, $profile1->getIPAddress());
     }
 }
-

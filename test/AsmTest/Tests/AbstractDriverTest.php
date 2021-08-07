@@ -9,14 +9,16 @@ use Asm\LostLockException;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Assert;
 
-abstract class AbstractDriverTest extends TestCase {
+abstract class AbstractDriverTest extends TestCase
+{
 
     /**
      * @var \Auryn\Injector
      */
     protected $injector;
 
-    protected function setUp() {
+    protected function setUp(): void
+    {
         $this->injector = createInjector();
     }
 
@@ -26,7 +28,7 @@ abstract class AbstractDriverTest extends TestCase {
     abstract function getDriver();
 
 
-    function testOpenInvalidSession()
+    function testOpenInvalidSession(): void
     {
         $driver = $this->getDriver();
         $sessionManager = createSessionManager($driver);
@@ -34,7 +36,7 @@ abstract class AbstractDriverTest extends TestCase {
         $driver->openSessionByID("12346", $encrypter, $sessionManager);
     }
     
-    function testBasicOpeningDeleting()
+    function testBasicOpeningDeleting(): void
     {
         $driver = $this->getDriver();
 
@@ -64,7 +66,7 @@ abstract class AbstractDriverTest extends TestCase {
     }
     
     
-    function testLockFailsToOpen()
+    function testLockFailsToOpen(): void
     {
         $driver = $this->getDriver();
 
@@ -89,7 +91,7 @@ abstract class AbstractDriverTest extends TestCase {
     /**
      *
      */
-    function testForceUnLock()
+    function testForceUnLock(): void
     {
         $driver = $this->getDriver();
 
@@ -116,7 +118,7 @@ abstract class AbstractDriverTest extends TestCase {
         $session->__destruct();
     }
 
-    function testDestructOfSessionUnlocks()
+    function testDestructOfSessionUnlocks(): void
     {
         $driver = $this->getDriver();
         
@@ -133,7 +135,7 @@ abstract class AbstractDriverTest extends TestCase {
         $openSession = $driver->createSession(new NullEncrypter(), $sessionManager);
         $sessionID = $openSession->getSessionId();
 
-        //This will release the lock. 
+        //This will release the lock.
         $openSession->__destruct();
         $openSession = null;
         
@@ -144,7 +146,7 @@ abstract class AbstractDriverTest extends TestCase {
     /**
      * @group debugging
      */
-    function testRenewLockWithoutAnyOtherAccessSucceeds()
+    function testRenewLockWithoutAnyOtherAccessSucceeds(): void
     {
         $driver = $this->getDriver();
         $lockTimeinMS = 100;
@@ -164,7 +166,7 @@ abstract class AbstractDriverTest extends TestCase {
     /**
      * @group failing
      */
-    function testRenewLockWithOtherSessionClaimingLockFails()
+    function testRenewLockWithOtherSessionClaimingLockFails(): void
     {
         $driver = $this->getDriver();
         $lockTimeinMS = 200;
@@ -200,7 +202,7 @@ abstract class AbstractDriverTest extends TestCase {
             $openSession->renewLock($lockTimeinMS);
             $this->fail("Renewing a lock that another session has acquired should throw an exception.");
         }
-        catch(\Asm\AsmException $ae) {
+        catch (\Asm\AsmException $ae) {
             //This is expected.
         }
 
@@ -220,20 +222,15 @@ abstract class AbstractDriverTest extends TestCase {
 //        $driver1->close();
 //
 //        $driver2 = $this->getDriver();
-//        
+//
 //        $foundSessionID = $driver2->findSessionIDFromZombieID($sessionID);
-//        
+//
 //        $this->assertNotFalse($foundSessionID, "Failed to find any live sesssion.");
 //        $this->assertEquals($newSessionID, $foundSessionID, "Zombie session ID '$sessionID' did not lead to new session ID '$newSessionID' instead got '$foundSessionID'. ");
 //
 //        $readData = $driver2->openSession($foundSessionID);
-//        
-//        
+//
+//
 //        $this->assertEquals($srcData, $readData, "Data read for session $foundSessionID did not match expected values.");
 //    }
 }
-
-
-
-
- 

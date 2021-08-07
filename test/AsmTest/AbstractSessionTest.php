@@ -14,11 +14,11 @@ use Asm\IdGenerator;
 use Asm\IdGenerator\RandomLibIdGenerator;
 use Asm\AsmException;
 use PHPUnit\Framework\TestCase;
-use Zend\Diactoros\Request;
-use Zend\Diactoros\ServerRequest;
+use Laminas\Diactoros\Request;
+use Laminas\Diactoros\ServerRequest;
 
-
-abstract class AbstractSessionTest extends TestCase {
+abstract class AbstractSessionTest extends TestCase
+{
 
     /**
      * @var \Auryn\injector
@@ -68,7 +68,7 @@ abstract class AbstractSessionTest extends TestCase {
         return $sessionManager;
     }
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->injector = createInjector();
         
@@ -82,7 +82,7 @@ abstract class AbstractSessionTest extends TestCase {
         );
     }
 
-    function testInvalidSessionAccess()
+    function testInvalidSessionAccess(): void
     {
         $wasCalled = false;
 
@@ -124,6 +124,19 @@ abstract class AbstractSessionTest extends TestCase {
         $request = $request->withCookieParams($cookies);
         $openSession = $sessionLoader->openSessionFromCookie($request);
         $this->assertNull($openSession);
+    }
+
+    function testSessionSendsHeaders()
+    {
+        $cookieData = [];
+        $sessionManager = $this->createSessionManager();
+        $request = new ServerRequest();
+        $session = $sessionManager->createSession($request);
+
+        $headers = $session->getHeaders(\Asm\SessionManager::CACHE_PRIVATE);
+
+        //test key is set-cookie,
+        // test value has name TestSession
     }
 
     /**
@@ -207,10 +220,10 @@ abstract class AbstractSessionTest extends TestCase {
 //        $this->assertEquals($srcData, $dataRead);
 //        $this->assertInstanceOf('ASM\Session', $reopenedSession);
 //    }
-//    
+//
 
     // Create a session, delete it, then attempt to re-open
-    // a new 
+    // a new
     function testCreateSessionDeleteThenReopen()
     {
         $cookieData = [];
@@ -223,18 +236,11 @@ abstract class AbstractSessionTest extends TestCase {
         $sessionID = $newSession->getSessionId();
         $newSession->delete();
 
-
         $request = createRequestFromSessionResponseHeaders($newSession);
-
         $sessionManager2 = $this->createSessionManager();
         //The session should no longer exist.
         $reopenedSession = $sessionManager2->openSessionFromCookie($request);
-        // TODO - this should be null right?
-
-        $this->assertNotEquals(
-            $reopenedSession->getSessionId(),
-            $sessionID
-        );
+        $this->assertNull($reopenedSession, "Somehow reopened session, even though deleted");
     }
 
 
@@ -252,18 +258,22 @@ abstract class AbstractSessionTest extends TestCase {
 
         $sessionManager->deleteSession($sessionID);
 
-        $cookieData = [
-            $this->sessionName => $sessionID
-        ];
+//        $cookieData = [
+//            $this->sessionName => $sessionID
+//        ];
 
         $sessionManager2 = $this->createSessionManager();
         //The session should no longer exist.
-        $reopenedSession = $sessionManager2->openSessionFromCookie($cookieData);
-        
-        $this->assertNotEquals(
-            $sessionID,
-            $reopenedSession->getSessionId()
-        );
+
+        $request = createRequestFromSessionResponseHeaders($newSession);
+        $reopenedSession = $sessionManager2->openSessionFromCookie($request);
+        $this->assertNull($reopenedSession);
+//        $reopenedSession
+//
+//        $this->assertNotEquals(
+//            $sessionID,
+//            $reopenedSession->getSessionId()
+//        );
     }
 
 
@@ -363,7 +373,7 @@ abstract class AbstractSessionTest extends TestCase {
 
         $profileChangeCalledCount = 0;
 
-        $profileChange = function(SessionManager $sessionManager, $newProfile, array $previousProfiles) use(&$profileChangeCalledCount, $originalProfile, $differentProfile) {
+        $profileChange = function (SessionManager $sessionManager, $newProfile, array $previousProfiles) use (&$profileChangeCalledCount, $originalProfile, $differentProfile) {
 
             $this->assertEquals(
                 $newProfile,
@@ -391,7 +401,7 @@ abstract class AbstractSessionTest extends TestCase {
         $sessionManager = $this->createSessionManager(null, $validationConfig);
 
         $newSession = $sessionManager->createSession(
-            [],
+            new ServerRequest(),
             $originalProfile->__toString()
         );
         $srcData = ['foo' => 'bar'.rand(1000000, 1000000)];
@@ -400,12 +410,14 @@ abstract class AbstractSessionTest extends TestCase {
         $sessionID = $newSession->getSessionId();
         $newSession->close();
 
-        $cookieData = [
-            $this->sessionName => $sessionID
-        ];
+//        $cookieData = [
+//            $this->sessionName => $sessionID
+//        ];
+//
+        $request = createRequestFromSessionResponseHeaders($newSession);
 
         $reopenedSession = $sessionManager->createSession(
-            $cookieData,
+            $request,
             $differentProfile->__toString()
         );
 
@@ -420,19 +432,23 @@ abstract class AbstractSessionTest extends TestCase {
     function testRenewLockWorks()
     {
         $sessionManager = $this->createSessionManager();
-        $session = $sessionManager->createSession([]);
+        $session = $sessionManager->createSession(new ServerRequest());
         $session->renewLock(1000);
     }
 
     function testForceReleaseLockAndRenew()
     {
         $sessionManager1 = $this->createSessionManager();
-        $session1 = $sessionManager1->createSession([]);
-        $sessionManager2 = $this->createSessionManager(\Asm\SessionConfig::LOCK_MANUALLY);
-        $session2 = $sessionManager2->openSessionByID($session1->getSessionId());
+        $session1 = $sessionManager1->createSession(new ServerRequest());
+        $sessionManager2 = $this->createSessionManager();
+        $request = createRequestFromSessionResponseHeaders($session1);
+        $session1->close();
+        //$session1->forceReleaseLocks();
+
+        $session2 = $sessionManager2->openSessionFromCookie($request);
         $this->assertNotNull($session2, "Failed to re-open session");
         $session2->forceReleaseLocks();
-        $this->setExpectedException('Asm\LostLockException');
+        $this->expectException('Asm\LostLockException');
         $session1->renewLock(1000);
     }
 
@@ -465,7 +481,7 @@ abstract class AbstractSessionTest extends TestCase {
             $reopenedSession = $sessionManager->createSession($request);
             $this->fail("FailedToAcquireLockException should have been thrown.");
         }
-        catch(FailedToAcquireLockException $ftale) {
+        catch (FailedToAcquireLockException $ftale) {
         }
         $session->close(false);
     }
@@ -532,7 +548,7 @@ abstract class AbstractSessionTest extends TestCase {
         foreach ($headerLines as $headerLine) {
             list ($key, $value) = $headerLine;
 
-            if (strcasecmp('Set-Cookie', $key) === 0){
+            if (strcasecmp('Set-Cookie', $key) === 0) {
                 $setCookieSet = true;
             }
             else if (strcasecmp('Cache-Control', $key) === 0) {
@@ -551,6 +567,4 @@ abstract class AbstractSessionTest extends TestCase {
 //delete
 // acquireLock
 // isLocked
-    
-    
 }

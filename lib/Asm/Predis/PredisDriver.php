@@ -434,7 +434,7 @@ END;
 //            $zombieTimeMilliseconds
 //        );
 //
-//        //TODO - combine this operation with the setting of the zombie key to avoid 
+//        //TODO - combine this operation with the setting of the zombie key to avoid
 //        //any possibility for a race condition.
 //
 //        //TODO - need to rename all the metadata keys.

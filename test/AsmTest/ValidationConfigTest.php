@@ -11,17 +11,18 @@ use PHPUnit\Framework\TestCase;
 /**
  * Class ValidationConfigTest
  */
-class ValidationConfigTest extends TestCase {
+class ValidationConfigTest extends TestCase
+{
 
     function testBasic()
     {
-        $profileChanged = function(SessionManager $session, $userProfile, $sessionProfiles) {
+        $profileChanged = function (SessionManager $session, $userProfile, $sessionProfiles) {
         };
-        $zombieKeyAccessed = function(SessionManager $session) {
+        $zombieKeyAccessed = function (SessionManager $session) {
         };
-        $invalidSessionAccessed = function(SessionManager $session) {
+        $invalidSessionAccessed = function (SessionManager $session) {
         };
-        $lostLockCallable = function(SessionManager $session) {
+        $lostLockCallable = function (SessionManager $session) {
         };
 
         $validationConfig = new ValidationConfig(
@@ -37,4 +38,3 @@ class ValidationConfigTest extends TestCase {
         $this->assertEquals($lostLockCallable, $validationConfig->getLockWasForceReleasedCallable());
     }
 }
-

@@ -1,10 +1,16 @@
 <?php
 
+
+//
+//require_once __DIR__ . "/../vendor/autoload.php";
+//require_once __DIR__ . "/fixtures.php";
+
+
 use Predis\Client as RedisClient;
 
-$autoloader = require(__DIR__.'/../vendor/autoload.php');
+$autoloader = require(__DIR__ . '/../vendor/autoload.php');
 
-require_once __DIR__."/mockFunctions.php";
+require_once __DIR__ . "/mockFunctions.php";
 
 function getRedisConfig()
 {
@@ -23,12 +29,12 @@ function getRedisOptions()
     static $unique = null;
 
     if ($unique == null) {
-        $unique = date("Ymdhis").uniqid();
+        $unique = date("Ymdhis") . uniqid();
     }
 
     $redisOptions = array(
         'profile' => '2.6',
-        'prefix' => 'sessionTest'.$unique.':',
+        'prefix' => 'sessionTest' . $unique . ':',
     );
 
     return $redisOptions;
@@ -41,12 +47,15 @@ function createRedisClient()
 }
 
 
-function maskAndCompareIPAddresses($ipAddress1, $ipAddress2, $maskBits)
-{
+function maskAndCompareIPAddresses(
+    $ipAddress1,
+    $ipAddress2,
+    $maskBits
+) {
     $ipAddress1 = ip2long($ipAddress1);
     $ipAddress2 = ip2long($ipAddress2);
 
-    $mask = (1<<(32 - $maskBits));
+    $mask = (1 << (32 - $maskBits));
 
     if (($ipAddress1 & $mask) == ($ipAddress2 & $mask)) {
         return true;
@@ -91,8 +100,10 @@ function createSessionManager(Asm\Driver $driver)
  * @param array $shares
  * @return \Auryn\Injector
  */
-function createInjector($mocks = array(), $shares = array())
-{
+function createInjector(
+    $mocks = array(),
+    $shares = array()
+) {
     $standardImplementations = [
     ];
 
@@ -145,22 +156,23 @@ function createInjector($mocks = array(), $shares = array())
         $injector->share($share);
     }
 
-    
+
     $injector->share($injector); //Yolo ServiceLocator
 
     return $injector;
 }
 
-function checkClient($redisClient, \PHPUnit\Framework\TestCase $test)
-{
+function checkClient(
+    $redisClient,
+    \PHPUnit\Framework\TestCase $test
+) {
     try {
         /** @var $redisClient \Predis\Client */
         $result = $redisClient->ping();
         if ($result != "PONG") {
             throw new \Exception("Redis ping is broken");
         }
-    }
-    catch (\Exception $e) {
+    } catch (\Exception $e) {
         //echo "exception :".$e->getMessage()."\n";
         $test->markTestSkipped("Redis unavailable");
     }
@@ -174,7 +186,7 @@ function createRequestFromSessionResponseHeaders(\Asm\Session $session)
 
     foreach ($headers as $headerLine) {
         list($key, $value) = $headerLine;
-        $extractedCookie = extractCookie($key . ": ". $value);
+        $extractedCookie = extractCookie($key . ": " . $value);
         if ($extractedCookie !== null) {
             list ($cookieName, $value) = $extractedCookie;
             $cookies[$cookieName] = $value;
