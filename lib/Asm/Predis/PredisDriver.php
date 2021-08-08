@@ -16,6 +16,7 @@ use Asm\RedisKeyGenerator;
 use Asm\Redis\StandardRedisKeyGenerator;
 use Asm\Serializer\PHPSerializer;
 use Predis\Client as RedisClient;
+use Asm\Profile\SimpleProfile;
 
 class PredisDriver implements Driver
 {
@@ -39,8 +40,7 @@ class PredisDriver implements Driver
      */
     private $idGenerator;
 
-    /** @var StandardRedisKeyGenerator  */
-    private $keyGenerator;
+    private RedisKeyGenerator $keyGenerator;
 
     /**
      * Redis lua script for releasing a lock. Returns int(1) when the lock was
@@ -91,21 +91,21 @@ END;
     ) {
         $this->redisClient = $redisClient;
 
-        if ($serializer) {
+        if ($serializer !== null) {
             $this->serializer = $serializer;
         }
         else {
             $this->serializer = new PHPSerializer();
         }
 
-        if ($idGenerator) {
+        if ($idGenerator !== null) {
             $this->idGenerator = $idGenerator;
         }
         else {
             $this->idGenerator = new \Asm\IdGenerator\RandomLibIdGenerator();
         }
 
-        if ($keyGenerator) {
+        if ($keyGenerator !== null) {
             $this->keyGenerator = $keyGenerator;
         }
         else {
@@ -121,15 +121,14 @@ END;
         string $sessionId,
         Encrypter $encrypter,
         SessionManager $sessionManager,
-        $userProfile = null
-    ) {
-        $sessionId = (string)$sessionId;
+        ?SimpleProfile $userProfile
+    ): ?Session {
 
         $lockToken = $this->acquireLockIfRequired($sessionId, $sessionManager);
 
         $dataKey = $this->keyGenerator->generateSessionDataKey($sessionId);
         $encryptedDataString = $this->redisClient->get($dataKey);
-        if ($encryptedDataString == null) {
+        if ($encryptedDataString === null) {
             if ($lockToken !== null) {
                 $this->releaseLock($sessionId, $lockToken);
             }
@@ -168,13 +167,10 @@ END;
         );
     }
 
-    /**
-     * @param $sessionId
-     * @param SessionManager $sessionManager
-     * @return null|string
-     */
-    private function acquireLockIfRequired($sessionId, SessionManager $sessionManager)
-    {
+    private function acquireLockIfRequired(
+        string $sessionId,
+        SessionManager $sessionManager
+    ): ?string {
         $lockToken = null;
         if ($sessionManager->getLockMode() == SessionConfig::LOCK_ON_OPEN) {
             $lockToken = $this->acquireLock(
@@ -191,15 +187,18 @@ END;
      * Create a new session
      * @return PredisSession
      * @param SessionManager $sessionManager
-     * @param null $userProfile
+     * @param ?SimpleProfile $userProfile
      * @throws AsmException
      */
-    public function createSession(Encrypter $encrypter, SessionManager $sessionManager, $userProfile = null)
-    {
+    public function createSession(
+        Encrypter $encrypter,
+        SessionManager $sessionManager,
+        SimpleProfile $userProfile = null
+    ): PredisSession {
         $sessionLifeTime = $sessionManager->getSessionConfig()->getLifetime();
         $initialData = [];
         $profiles = [];
-        if ($userProfile) {
+        if ($userProfile !== null) {
             $profiles = [$userProfile];
         }
         $initialData['profiles'] = $profiles;
@@ -209,7 +208,7 @@ END;
         $lockToken = null;
 
         for ($count = 0; $count < 10; $count++) {
-            $sessionId = $this->idGenerator->generateSessionID();
+            $sessionId = $this->idGenerator->generateSessionId();
             $lockToken = $this->acquireLockIfRequired($sessionId, $sessionManager);
             $dataKey = $this->keyGenerator->generateSessionDataKey($sessionId);
             $set = $this->redisClient->set(
@@ -220,7 +219,7 @@ END;
                 'NX'
             );
 
-            if ($set) {
+            if ($set !== null) {
                 return new PredisSession(
                     $sessionId,
                     $this,
@@ -244,19 +243,19 @@ END;
         );
     }
 
-    /**
-     * @param $sessionID
-     * @return mixed|void
-     */
-    public function deleteSessionByID($sessionID)
+    public function deleteSessionByID(string $sessionID): void
     {
         $dataKey = $this->keyGenerator->generateSessionDataKey($sessionID);
         $this->redisClient->del($dataKey);
     }
 
 
-    public function save(Session $session, Encrypter $encrypter, $saveData, $existingProfiles)
-    {
+    public function save(
+        Session $session,
+        Encrypter $encrypter,
+        array $saveData,
+        array $existingProfiles
+    ): void {
         $sessionID = $session->getSessionId();
         $sessionLifeTime = 3600; // 1 hour
 
@@ -276,7 +275,7 @@ END;
             $sessionLifeTime
         );
 
-        if (!$written) {
+        if ($written !== true) {
             throw new AsmException("Failed to save data", AsmException::IO_ERROR);
         }
     }
@@ -289,15 +288,13 @@ END;
 //        // Nothing to do for redis driver as redis automatically clears dead keys
 //    }
 
-    /**
-     * @param $sessionID
-     * @return bool
-     */
-    public function validateLock($sessionID, $lockToken)
+
+    public function validateLock(string $sessionID, string $lockToken): bool
     {
-        if (!$lockToken) {
-            return false;
-        }
+        // TODO - why was this ever possible
+//        if ($lockToken !== null) {
+//            return false;
+//        }
         
         $lockKey = $this->keyGenerator->generateLockKey($sessionID);
         $storedLockNumber = $this->redisClient->get($lockKey);
@@ -310,17 +307,10 @@ END;
     }
 
 
-    /**
-     * @param $sessionID
-     * @param $lockTimeMS
-     * @param $acquireTimeoutMS
-     * @return string LockToken
-     * @throws FailedToAcquireLockException
-     */
-    public function acquireLock($sessionID, $lockTimeMS, $acquireTimeoutMS)
+    public function acquireLock(string $sessionID, int $lockTimeMS, int $acquireTimeoutMS): string
     {
         $lockKey = $this->keyGenerator->generateLockKey($sessionID);
-        $lockToken = $this->idGenerator->generateSessionID();
+        $lockToken = $this->idGenerator->generateSessionId();
         $finished = false;
 
         $giveUpTime = ((int)(microtime(true) * 1000)) + $acquireTimeoutMS;
@@ -348,47 +338,38 @@ END;
         return $lockToken;
     }
 
-    /**
-     * @param $sessionId
-     * @param $lockToken
-     * @return mixed
-     * @throws LostLockException
-     */
-    public function releaseLock($sessionId, $lockToken)
+    public function releaseLock(string $sessionId, string $lockToken): int
     {
         $lockKey = $this->keyGenerator->generateLockKey($sessionId);
         $result = $this->redisClient->eval(self::UNLOCK_SCRIPT, 1, $lockKey, $lockToken);
         
-        // TODO - should
+        // TODO - this should be handled better...
 //        if ($result !== 1) {
 //            throw new LostLockException(
 //                "Releasing lock revealed lock had been lost."
 //            );
 //        }
 
+        /** @var int $result */
         return $result;
     }
 
-    /**
-     * @param $sessionID
-     * @return mixed|void
-     */
-    public function forceReleaseLockByID($sessionID)
+
+    public function forceReleaseLockByID(string $sessionID): void
     {
         $lockKey = $this->keyGenerator->generateLockKey($sessionID);
         $this->redisClient->del($lockKey);
     }
 
-    /**
-     * @param $sessionID
-     * @param $lockToken
-     * @param $lockTimeMS
-     * @return mixed
-     * @throws LostLockException
-     */
-    public function renewLock($sessionID, $lockToken, $lockTimeMS)
+    public function renewLock(string $sessionID, string $lockToken, int $lockTimeMS): void
     {
         $lockKey = $this->keyGenerator->generateLockKey($sessionID);
+
+        /**
+         * @phpstan-ignore-next-line
+         *
+         * Method Predis\ClientInterface::eval() invoked with 5 parameters, 2-4 required.
+         */
         $result = $this->redisClient->eval(
             self::RENEW_LOCK_SCRIPT,
             1,
@@ -396,12 +377,13 @@ END;
             $lockToken,
             $lockTimeMS
         );
- 
+
+        // TODO - why is this an exception and not an error return?
         if ($result != "OK") {
             throw new LostLockException("Failed to renew lock.");
         }
 
-        return $result;
+//        return $result;
     }
     
 
@@ -448,13 +430,7 @@ END;
 //    }
 
 
-
-    /**
-     * @param $sessionID
-     * @param $index
-     * @return int
-     */
-    public function get($sessionID, $index)
+    public function get(string $sessionID, string $index): ?string
     {
         $key = $this->keyGenerator->generateAsyncKey($sessionID, $index);
 
@@ -462,71 +438,50 @@ END;
     }
 
 
-    /**
-     * @param $sessionID
-     * @param $index
-     * @param $value
-     * @return int
-     */
-    public function set($sessionID, $index, $value)
+    public function set(string $sessionID, string $index, string|int $value): void
     {
         $key = $this->keyGenerator->generateAsyncKey($sessionID, $index);
 
-        return $this->redisClient->hset($key, $index, $value);
+//        return $this->redisClient->hset($key, $index, $value);
+        $this->redisClient->hset($key, $index, $value);
     }
 
 
-    /**
-     * @param $sessionID
-     * @param $index
-     * @param $increment
-     * @return int
-     */
-    public function increment($sessionID, $index, $increment)
+    public function increment(string $sessionID, string $index, int $increment): int
     {
         $key = $this->keyGenerator->generateAsyncKey($sessionID, $index);
 
         return $this->redisClient->hincrby($key, $index, $increment);
     }
 
-    /**
-     * @param $sessionID
-     * @param $index
-     * @return array
-     */
-    public function getList($sessionID, $index)
+
+    public function getList(string $sessionID, string $index): array
     {
         $key = $this->keyGenerator->generateAsyncKey($sessionID, $index);
 
         return $this->redisClient->lrange($key, 0, -1);
     }
 
-    /**
-     * @param $sessionID
-     * @param $index
-     * @param $value
-     * @return int
-     */
-    public function appendToList($sessionID, $index, $value)
+
+    public function appendToList(string $sessionID, string $index, string|int $value): int
     {
         $key = $this->keyGenerator->generateAsyncKey($sessionID, $index);
-        
-        if (is_array($value)) {
-            return $this->redisClient->rpush($key, $value);
-        }
-        else {
+
+        // TODO - why do we care about returning the length?
+        // That seems to be implementation leakage.
+
+//        if (is_array($value)) {
+//            return $this->redisClient->rpush($key, $value);
+//        }
+//        else {
             return $this->redisClient->rpush($key, [$value]);
-        }
+//        }
     }
 
-    /**
-     * @param $sessionID
-     * @param $index
-     * @return int
-     */
-    public function clearList($sessionID, $index)
+    public function clearList(string $sessionID, string $index): void
     {
         $key = $this->keyGenerator->generateAsyncKey($sessionID, $index);
-        return $this->redisClient->del($key);
+//        return $this->redisClient->del($key);
+        $this->redisClient->del($key);
     }
 }

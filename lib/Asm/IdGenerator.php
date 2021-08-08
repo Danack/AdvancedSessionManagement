@@ -4,5 +4,5 @@ namespace Asm;
 
 interface IdGenerator
 {
-    public function generateSessionId();
+    public function generateSessionId(): string;
 }

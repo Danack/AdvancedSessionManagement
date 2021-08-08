@@ -24,7 +24,14 @@ class SlimSessionMiddleware
         $this->injector = $injector;
     }
 
-    public function __invoke(ServerRequest $request, ResponseInterface $response, $next)
+    /**
+     * @param ServerRequest $request
+     * @param ResponseInterface $response
+     * @param callable $next
+     * @return \Psr\Http\Message\ResponseInterface
+     * @throws \Auryn\ConfigException
+     */
+    public function __invoke(ServerRequest $request, ResponseInterface $response, $next): ResponseInterface
     {
         $session = $this->sessionManager->createSession($request);
         $this->injector->share($session);
@@ -41,7 +48,7 @@ class SlimSessionMiddleware
         );
 
         foreach ($headers as $key => $value) {
-            /** @var $response \Psr\Http\Message\ResponseInterface */
+            /** @var ResponseInterface $response */
             $response = $response->withAddedHeader($key, $value);
         }
 

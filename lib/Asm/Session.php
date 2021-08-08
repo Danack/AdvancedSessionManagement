@@ -5,21 +5,14 @@ namespace Asm;
 
 interface Session
 {
-    /**
-     * @param $privacy int one of the \ASM\SessionManager::CACHE_* constants
-     * @param null $path
-     * @param bool $domain
-     * @param bool $secure
-     * @param bool $httpOnly
-     * @return string[]
-     */
+
     public function getHeaders(
-        $privacy,
-        $path = null,
-        $domain = false,
-        $secure = false,
-        $httpOnly = true
-    );
+        string $privacy,
+        ?string $path = null,
+        ?string $domain = null,
+        bool $secure = false,
+        bool $httpOnly = true
+    ): array;
 
     /**
      * @return mixed
@@ -50,7 +43,7 @@ interface Session
      * @param bool $saveData
      * @return mixed
      */
-    public function close($saveData = true);
+    public function close(bool $saveData = true);
 
     /**
      * Deletes the Session from memory and storage.
@@ -70,14 +63,9 @@ interface Session
      *
      * @return boolean
      */
-    public function isLocked();
+    public function isLocked(): bool;
 
-    /**
-     * If the driver
-     * @param $sessionID
-     * @return boolean
-     */
-    public function validateLock();
+    public function validateLock(): bool;
 
     /**
      * Acquire a lock for the session, or renew it if the session already
@@ -88,7 +76,7 @@ interface Session
      * lock before giving up and throwing an exception.
      * @return mixed
      */
-    public function acquireLock($lockTimeMS, $acquireTimeoutMS);
+    public function acquireLock(int $lockTimeMS, int $acquireTimeoutMS);
 
     /**
      * Renew the lock the session has on the data.
@@ -96,11 +84,11 @@ interface Session
      * If the lock has been broken by another process, an exception
      * will be thrown, to prevent data loss through concurrent modification.
      *
-     * @param $milliseconds
+     * @param int $milliseconds
      * @return mixed
      * @throws AsmException
      */
-    public function renewLock($milliseconds);
+    public function renewLock(int $milliseconds);
 
     /**
      * Release the lock the session has on the data.
@@ -125,21 +113,15 @@ interface Session
      */
     public function isActive();
 
-    /**
-     * @param $dyingSessionID
-     * @param $newSessionID
-     * @param $zombieTimeMilliseconds
-     * @return string newSessionID
-     */
-     //function setupZombieID($dyingSessionID, $zombieTimeMilliseconds);
+    //function setupZombieID($dyingSessionID, $zombieTimeMilliseconds);
 
-    /**
-     * @param $sessionID
-     * @return mixed
-     */
     //function findSessionIDFromZombieID($zombieSsessionID);
     
-    public function set($name, $value);
+    public function set(string $name, int|bool|array|string|float $value): void;
 
-    public function get($name, $default = null, $clear = false);
+    public function get(
+        string $name,
+        int|bool|array|string|float $default = null,
+        bool $clear = false
+    ): int|bool|array|string|float|null;
 }

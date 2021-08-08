@@ -11,45 +11,49 @@ use Asm\LostLockException;
 
 class PredisSession implements Session
 {
-    protected $sessionId = null;
+    protected string $sessionId;
 
     /**
      * @var PredisDriver
      */
-    protected $redisDriver;
+    protected PredisDriver $redisDriver;
 
     /** @var SessionManager */
-    protected $sessionManager;
+    protected SessionManager $sessionManager;
 
     /**
      * @var Encrypter
      */
     protected $encrypter;
     
-    private $isActive = false;
+    private bool $isActive = false;
 
     /**
      * @var array
      */
-    protected $data;
-
-    protected $currentProfiles;
+    protected array $data;
 
     /**
-     * @var string A token for each lock. It allows us to detect when another
-     * process has force released the lock, and it is no longer owned by this process.
+     * @var \Asm\Profile\SimpleProfile[]
      */
-    protected $lockToken;
+    protected array $currentProfiles;
+
+    /**
+     * @var ?string A token for each lock. It allows us to detect when another
+     * process has force released the lock, and it is no longer owned by this process.
+     * TODO - replace this with a type, that also stores the type of lock.
+     */
+    protected ?string $lockToken;
 
     public function __construct(
-        $sessionID,
+        string $sessionID,
         PredisDriver $redisDriver,
         SessionManager $sessionManager,
         Encrypter $encrypter,
         array $data,
         array $currentProfiles,
-        $isActive,
-        $lockToken
+        bool $isActive,
+        ?string $lockToken
     ) {
         $this->sessionId = $sessionID;
         $this->redisDriver = $redisDriver;
@@ -68,24 +72,14 @@ class PredisSession implements Session
     {
         $this->releaseLock();
     }
-    
-    /**
-     * @param $privacy
-     * @param null $lastModifiedTime
-     * @param bool $domain
-     * @param null $path
-     * @param bool $secure
-     * @param bool $httpOnly
-     * @return array
-     * @throws AsmException
-     */
+
     public function getHeaders(
-        $privacy,
-        $path = null,
-        $domain = false,
-        $secure = false,
-        $httpOnly = true
-    ) {
+        string $privacy,
+        ?string $path = null,
+        ?string $domain = null,
+        bool $secure = false,
+        bool $httpOnly = true
+    ): array {
         return $this->sessionManager->getHeaders(
             $this->encrypter,
             $this->sessionId,
@@ -98,26 +92,23 @@ class PredisSession implements Session
     }
 
 
-    /**
-     * @return mixed
-     */
-    public function getSessionId()
+    public function getSessionId(): string
     {
         return $this->sessionId;
     }
 
-    public function getData()
+    public function getData(): array
     {
         return $this->data;
     }
 
-    public function setData(array $data)
+    public function setData(array $data): void
     {
         $this->data = $data;
         $this->isActive = true;
     }
 
-    public function save()
+    public function save(): void
     {
         $this->redisDriver->save(
             $this,
@@ -127,11 +118,7 @@ class PredisSession implements Session
         );
     }
 
-    /**
-     * @param bool $saveData
-     * @return mixed|void
-     */
-    public function close($saveData = true)
+    public function close(bool $saveData = true): void
     {
         if ($saveData) {
             $this->save();
@@ -140,13 +127,13 @@ class PredisSession implements Session
         $this->releaseLock();
     }
 
-    public function delete()
+    public function delete(): void
     {
         $this->redisDriver->deleteSessionByID($this->sessionId);
         $this->releaseLock();
     }
 
-    public function acquireLock($lockTimeMS, $acquireTimeoutMS)
+    public function acquireLock($lockTimeMS, $acquireTimeoutMS): void
     {
         $this->lockToken = $this->redisDriver->acquireLock(
             $this->sessionId,
@@ -155,70 +142,52 @@ class PredisSession implements Session
         );
     }
 
-    public function releaseLock()
+    public function releaseLock(): void
     {
-        if ($this->lockToken) {
+        if ($this->lockToken !== null) {
             $lockToken = $this->lockToken;
             $this->lockToken = null;
             $this->redisDriver->releaseLock($this->sessionId, $lockToken);
         }
     }
 
-    /**
-     * @param $index
-     * @param $increment
-     * @return int
-     */
-    public function increment($index, $increment)
+
+    public function increment(string $index, int $increment): int
     {
         return $this->redisDriver->increment($this->sessionId, $index, $increment);
     }
 
-    /**
-     * @param $index
-     * @return array
-     */
-    public function getList($index)
+    public function getList(string $index): array
     {
         return $this->redisDriver->getList($this->sessionId, $index);
     }
 
-    /**
-     * @param $key
-     * @param $value
-     * @return int
-     */
-    public function appendToList($key, $value)
+    public function appendToList(string $key, string|int $value): int
     {
         $result = $this->redisDriver->appendToList($this->sessionId, $key, $value);
 
         return $result;
     }
 
-    /**
-     * @param $index
-     * @return int
-     */
-    public function clearList($index)
+    public function clearList(string $index): void
     {
-        return $this->redisDriver->clearList($this->sessionId, $index);
+//        return $this->redisDriver->clearList($this->sessionId, $index);
+        $this->redisDriver->clearList($this->sessionId, $index);
     }
 
-    /**
-     * @param $milliseconds
-     * @throws AsmException
-     * @internal param $sessionID
-     * @return mixed
-     */
-    public function renewLock($milliseconds)
+
+    public function renewLock(int $milliseconds): void
     {
+        if ($this->lockToken === null) {
+            // er - why is this possible?
+            // probably should throw exception.
+            return;
+        }
+
         $this->redisDriver->renewLock($this->sessionId, $this->lockToken, $milliseconds);
     }
 
-    /**
-     * @return bool
-     */
-    public function isActive()
+    public function isActive(): bool
     {
         return $this->isActive;
     }
@@ -229,18 +198,18 @@ class PredisSession implements Session
      *
      * @return boolean
      */
-    public function isLocked()
+    public function isLocked(): bool
     {
         return ($this->lockToken != null);
     }
 
-    /**
-     * If the driver
-     * @param $sessionID
-     * @return boolean
-     */
-    public function validateLock()
+    public function validateLock(): bool
     {
+        if ($this->lockToken === null) {
+            // er - why is this possible?
+            return false;
+        }
+
         return $this->redisDriver->validateLock(
             $this->sessionId,
             $this->lockToken
@@ -250,16 +219,12 @@ class PredisSession implements Session
     /**
      * @return void
      */
-    public function forceReleaseLocks()
+    public function forceReleaseLocks(): void
     {
         $this->redisDriver->forceReleaseLockByID($this->sessionId);
     }
 
-    /**
-     * @param $name
-     * @param $value
-     */
-    public function set($name, $value)
+    public function set(string $name, int|bool|array|string|float $value): void
     {
         $this->data[$name] = $value;
         $this->isActive = true;
@@ -268,8 +233,11 @@ class PredisSession implements Session
     /**
      * @inheritdoc
      */
-    public function get($name, $default = null, $clear = false)
-    {
+    public function get(
+        string $name,
+        int|bool|array|string|float $default = null,
+        bool $clear = false
+    ): int|bool|array|string|float|null {
         if (array_key_exists($name, $this->data) == false) {
             return $default;
         }

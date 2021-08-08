@@ -6,12 +6,14 @@ use Asm\Driver as SessionDriver;
 use Asm\Encrypter\NullEncrypterFactory;
 use Asm\Encrypter\OpenSslEncrypterFactory;
 use Psr\Http\Message\ServerRequestInterface as ServerRequest;
+use Asm\Profile\SimpleProfile;
 
 class SessionManager implements CookieGenerator
 {
     const READ_ONLY = 'READ_ONLY';
     const WRITE_LOCK = 'WRITE_LOCK';
 
+    // TODO - convert to enum
     const CACHE_SKIP = 'skip';
     const CACHE_PUBLIC = 'public';
     const CACHE_PRIVATE = 'private';
@@ -59,7 +61,7 @@ class SessionManager implements CookieGenerator
         $this->sessionConfig = $sessionConfig;
         $this->driver = $driver;
 
-        if ($validationConfig) {
+        if ($validationConfig !== null) {
             $this->validationConfig = $validationConfig;
         }
         else {
@@ -70,7 +72,7 @@ class SessionManager implements CookieGenerator
             );
         }
 
-        if ($encrypterFactory) {
+        if ($encrypterFactory !== null) {
             $this->encrypterFactory = $encrypterFactory;
         }
         else {
@@ -79,12 +81,12 @@ class SessionManager implements CookieGenerator
         }
     }
 
-    public function getSessionConfig()
+    public function getSessionConfig(): SessionConfig
     {
         return $this->sessionConfig;
     }
 
-    public function getLockMode()
+    public function getLockMode(): string
     {
         return $this->sessionConfig->getLockMode();
     }
@@ -96,7 +98,7 @@ class SessionManager implements CookieGenerator
      * @param null $userProfile
      * @return Session|null
      */
-    public function openSessionFromCookie(ServerRequest $request, $userProfile = null)
+    public function openSessionFromCookie(ServerRequest $request, $userProfile = null): ?Session
     {
         $cookieData = $request->getCookieParams();
         $encrypter = $this->encrypterFactory->create($cookieData);
@@ -123,11 +125,11 @@ class SessionManager implements CookieGenerator
     /**
      * Call the invalidSessionAccessed callable, if one is set.
      */
-    private function invalidSessionAccessed()
+    private function invalidSessionAccessed(): void
     {
         $invalidSessionAccessed = $this->validationConfig->getInvalidSessionAccessedCallable();
 
-        if (!$invalidSessionAccessed) {
+        if ($invalidSessionAccessed === null) {
             return;
         }
 
@@ -142,9 +144,9 @@ class SessionManager implements CookieGenerator
      *
      * @param ServerRequest $request
      * @param null $userProfile
-     * @return
+     * @return Session
      */
-    public function createSession(ServerRequest $request, $userProfile = null)
+    public function createSession(ServerRequest $request, $userProfile = null): Session
     {
         $cookieData = $request->getCookieParams();
         $encrypter = $this->encrypterFactory->create($cookieData);
@@ -332,30 +334,32 @@ class SessionManager implements CookieGenerator
 
 
     /**
-     * @param $newProfile
-     * @param $existingProfiles
+     * @param ?SimpleProfile $newProfile
+     * @param SimpleProfile[] $existingProfiles
      * @return mixed|null
      * @throws AsmException
      */
-    public function performProfileSecurityCheck($newProfile, $existingProfiles)
+    public function performProfileSecurityCheck(?SimpleProfile $newProfile, array $existingProfiles)
     {
         if ($newProfile === null) {
             return $existingProfiles;
         }
 
-        if (is_string($newProfile) == false &&
-            (!(is_object($newProfile) && method_exists($newProfile, '__toString')))) {
-            throw new AsmException(
-                "userProfile must be a string or an object containing a __toString method.",
-                AsmException::BAD_ARGUMENT
-            );
-        }
+        // TODO - making SimpleProfile be a class/interface makes this go away.
+//        if (is_string($newProfile) == false &&
+//            (!(is_object($newProfile) && method_exists($newProfile, '__toString')))) {
+//            throw new AsmException(
+//                "userProfile must be a string or an object containing a __toString method.",
+//                AsmException::BAD_ARGUMENT
+//            );
+//        }
 
         $profileChangedCallable = $this->validationConfig->getProfileChangedCallable();
-        if (!$profileChangedCallable) {
+        if ($profileChangedCallable === null) {
             return $existingProfiles;
         }
 
+        // TODO - document this.
         foreach ($existingProfiles as $sessionProfile) {
             if ($newProfile === $sessionProfile) {
                 return $existingProfiles;
@@ -387,41 +391,27 @@ class SessionManager implements CookieGenerator
 //        $this->driver->addProfile($this->sessionID, $sessionProfile);
 //    }
 
-    /**
-     *
-     */
-    public function destroyExpiredSessions()
+
+    public function destroyExpiredSessions(): void
     {
+        // TODO - presumably this should do something?
     }
 
-    /**
-     * @param $sessionID
-     */
-    public function deleteSession($sessionID)
+    public function deleteSession(string $sessionID): void
     {
         $this->driver->deleteSessionByID($sessionID);
     }
 
-    /**
-     * @param $sessionId
-     * @param $privacy
-     * @param $lastModifiedTime
-     * @param $domain
-     * @param $path
-     * @param $secure
-     * @param $httpOnly
-     * @return array
-     * @throws AsmException
-     */
+
     public function getHeaders(
         Encrypter $encrypter,
-        $sessionId,
-        $privacy,
-        $domain,
-        $path,
-        $secure,
-        $httpOnly
-    ) {
+        string $sessionId,
+        string $privacy,
+        ?string $domain,
+        ?string $path,
+        bool $secure,
+        bool $httpOnly
+    ): array {
         $time = time();
 
         $headers = [];
@@ -436,7 +426,7 @@ class SessionManager implements CookieGenerator
             $httpOnly
         )];
 
-        $cachingHeader = ASM::getCacheControlPrivacyHeader($privacy);
+        $cachingHeader = Asm::getCacheControlPrivacyHeader($privacy);
         $headers[] = $cachingHeader;
 
         $encryptionCookieHeaders = $encrypter->getCookieHeaders();

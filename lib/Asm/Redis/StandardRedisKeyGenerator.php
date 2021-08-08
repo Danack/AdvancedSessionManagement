@@ -8,17 +8,12 @@ use Asm\RedisKeyGenerator;
 
 class StandardRedisKeyGenerator implements RedisKeyGenerator
 {
-    /**
-     * @param $sessionID
-     * @return string
-     *
-     */
-    public function generateSessionDataKey(string $sessionID) : string
+    public function generateSessionDataKey(string $sessionID): string
     {
         return 'session:'.$sessionID;
     }
 
-    public function generateZombieKey(string $dyingSessionID) : string
+    public function generateZombieKey(string $dyingSessionID): string
     {
         return 'zombie:'.$dyingSessionID;
     }
@@ -33,14 +28,12 @@ class StandardRedisKeyGenerator implements RedisKeyGenerator
         return 'session:'.$sessionID.':profile';
     }
 
-//    /**
-//     * @param $sessionID
-//     * @return string
-//     */
-//    function generateAsyncKey($sessionID)
-//    {
-//        $key = 'session:'.$sessionID.':async';
-//
-//        return $key;
-//    }
+    function generateAsyncKey(string $sessionID, string $index): string
+    {
+//        $key = 'session:' . $sessionID . ':async';
+        // TODO - index needs to be used better than this:
+        $key = 'session:' . $sessionID . ':async:' . $index;
+
+        return $key;
+    }
 }

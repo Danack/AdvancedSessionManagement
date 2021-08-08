@@ -6,6 +6,7 @@ namespace AsmTest\Stub;
 use Asm\AsmException;
 use Asm\Driver;
 use Asm\Encrypter;
+use Asm\Profile\SimpleProfile;
 use Asm\Session;
 use Asm\SessionManager;
 
@@ -20,8 +21,12 @@ class NullDriver implements Driver
      * @param null $userProfile
      * @return Session|null The newly opened session
      */
-    function openSessionByID(string $sessionID, Encrypter $encrypter, SessionManager $sessionManager, $userProfile = null)
-    {
+    public function openSessionByID(
+        string $sessionID,
+        Encrypter $encrypter,
+        SessionManager $sessionManager,
+        ?SimpleProfile $userProfile
+    ): ?Session {
         throw new \Exception("Not implemented");
     }
 
@@ -31,8 +36,11 @@ class NullDriver implements Driver
      * @param null $userProfile
      * @return Session The newly opened session.
      */
-    public function createSession(Encrypter $encrypter, SessionManager $sessionManager, $userProfile = null)
-    {
+    public function createSession(
+        Encrypter $encrypter,
+        SessionManager $sessionManager,
+        SimpleProfile $userProfile = null
+    ): Session {
         throw new \Exception("Not implemented");
     }
 
@@ -40,7 +48,7 @@ class NullDriver implements Driver
      * Delete a single session that matches the $sessionID
      * @param $sessionID
      */
-    function deleteSessionByID($sessionID)
+    public function deleteSessionByID(string $sessionID): void
     {
         throw new \Exception("Not implemented");
     }
@@ -49,7 +57,7 @@ class NullDriver implements Driver
      * @param $sessionID
      * @return mixed
      */
-    function forceReleaseLockByID($sessionID)
+    function forceReleaseLockByID($sessionID): void
     {
         throw new \Exception("Not implemented");
     }

@@ -19,7 +19,7 @@ class RandomLibIdGenerator implements IdGenerator
         $this->generator = $factory->getMediumStrengthGenerator();
     }
 
-    public function generateSessionId()
+    public function generateSessionId(): string
     {
         // We use a restricted set of characters to allow simplifications
         // in the session driver implementations.

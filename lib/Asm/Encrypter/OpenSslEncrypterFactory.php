@@ -9,7 +9,7 @@ use Asm\EncrypterFactory;
 
 class OpenSslEncrypterFactory implements EncrypterFactory
 {
-    private $cookieName;
+    private string $cookieName;
 
     /**
      * OpenSslEncrypterFactory constructor.

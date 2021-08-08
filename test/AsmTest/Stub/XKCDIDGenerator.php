@@ -6,7 +6,7 @@ use Asm\IdGenerator;
 
 class XKCDIDGenerator implements IdGenerator
 {
-    function generateSessionId()
+    function generateSessionId(): string
     {
         return "4";
     }

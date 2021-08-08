@@ -10,7 +10,7 @@ namespace Asm;
 class ValidationConfig
 {
     /**
-     * @var callable Which callable to call when the profile has changed. The callable
+     * @var callable|null Which callable to call when the profile has changed. The callable
      * is passed both the profile as it was when the session was generated, and the new profile
      *
      * $fn(SessionManager $sessionManager, $newProfile, $existingProfiles);
@@ -19,17 +19,17 @@ class ValidationConfig
     private $profileChanged;
 
     /**
-     * @var callable Which callable to call when a zombie session has been accessed.
+     * @var callable|null Which callable to call when a zombie session has been accessed.
      */
     private $zombieKeyAccessed;
 
     /**
-     * @var callable Which callable to call when a totally invalid session has been accessed.
+     * @var callable|null Which callable to call when a totally invalid session has been accessed.
      */
     private $invalidSessionAccessed;
 
     /**
-     * @var callable Which callable to call when a lock has been lost. If this callable
+     * @var callable|null Which callable to call when a lock has been lost. If this callable
      * is not set
      */
     private $lostLockCallable;
@@ -47,7 +47,7 @@ class ValidationConfig
     }
 
     /**
-     * @return callable
+     * @return ?callable
      */
     public function getInvalidSessionAccessedCallable()
     {
@@ -55,7 +55,7 @@ class ValidationConfig
     }
 
     /**
-     * @return callable
+     * @return ?callable
      */
     public function getProfileChangedCallable()
     {
@@ -63,7 +63,7 @@ class ValidationConfig
     }
 
     /**
-     * @return callable
+     * @return ?callable
      */
     public function getZombieKeyAccessedCallable()
     {
@@ -71,7 +71,7 @@ class ValidationConfig
     }
 
     /**
-     * @return callable
+     * @return ?callable
      */
     public function getLockWasForceReleasedCallable()
     {

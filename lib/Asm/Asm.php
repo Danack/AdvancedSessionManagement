@@ -9,11 +9,11 @@ class Asm
 {
     /**
      *
-     * @param $caching
+     * @param string $caching
      * @return array
      * @throws AsmException
      */
-    public static function getCacheControlPrivacyHeader($caching)
+    public static function getCacheControlPrivacyHeader(string $caching)
     {
         $cacheHeaderInfo = [
             SessionManager::CACHE_SKIP => null,
@@ -36,27 +36,16 @@ class Asm
         return ['Cache-Control', $cacheHeaderInfo[$caching]];
     }
 
-    /**
-     * @param $time
-     * @param $cookieName
-     * @param $cookieValue
-     * @param $lifetime
-     * @param null $path
-     * @param bool $domain
-     * @param bool $secure
-     * @param bool $httpOnly
-     * @return string
-     */
     public static function generateCookieHeaderString(
-        $time,
-        $cookieName,
-        $cookieValue,
-        $lifetime,
-        $path = null,
-        $domain = false,
-        $secure = false,
-        $httpOnly = true
-    ) {
+        int $time,
+        string $cookieName,
+        string $cookieValue,
+        int $lifetime,
+        ?string $path = null,
+        ?string $domain = null,
+        bool $secure = false,
+        bool $httpOnly = true
+    ): string {
         $COOKIE_EXPIRES = "; expires=";
         $COOKIE_MAX_AGE = "; Max-Age=";
         $COOKIE_PATH = "; path=";
@@ -75,12 +64,12 @@ class Asm
         $headerString .= $COOKIE_MAX_AGE;
         $headerString .= $lifetime;
 
-        if ($path) {
+        if ($path !== null) {
             $headerString .= $COOKIE_PATH;
             $headerString .= $path;
         }
 
-        if ($domain) {
+        if ($domain !== null) {
             $headerString .= $COOKIE_DOMAIN;
             $headerString .= $domain;
         }

@@ -2,43 +2,37 @@
 
 namespace Asm\Profile;
 
+use function JsonSafe\json_encode_safe;
+
 class SimpleProfile
 {
-    private $ipAddress;
+    private string $ipAddress;
 
-    private $userAgent;
+    private string $userAgent;
 
-    public function __construct($userAgent, $ipAddress)
+    public function __construct(string $userAgent, string $ipAddress)
     {
         $this->ipAddress = $ipAddress;
         $this->userAgent = $userAgent;
     }
 
-    /**
-     * @return mixed
-     */
-    public function getIPAddress()
+
+    public function getIPAddress(): string
     {
         return $this->ipAddress;
     }
 
-    /**
-     * @return mixed
-     */
-    public function getUserAgent()
+    public function getUserAgent(): string
     {
         return $this->userAgent;
     }
 
-    /**
-     * @return string
-     */
-    public function __toString()
+    public function __toString(): string
     {
         $data = [];
         $data['ipAddress'] = $this->ipAddress;
         $data['userAgent'] = $this->userAgent;
 
-        return json_encode($data);
+        return json_encode_safe($data);
     }
 }

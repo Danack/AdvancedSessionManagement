@@ -10,11 +10,11 @@ interface CookieGenerator
 {
     public function getHeaders(
         Encrypter $encrypter,
-        $sessionId,
-        $privacy,
-        $domain,
-        $path,
-        $secure,
-        $httpOnly
-    );
+        string $sessionId,
+        string $privacy,
+        ?string $domain,
+        ?string $path,
+        bool $secure,
+        bool $httpOnly
+    ): array;
 }

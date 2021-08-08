@@ -13,4 +13,6 @@ interface RedisKeyGenerator
     public function generateLockKey(string $sessionID) : string;
 
     public function generateProfileKey(string $sessionID) : string;
+
+    public function generateAsyncKey(string $sessionID, string $index): string;
 }

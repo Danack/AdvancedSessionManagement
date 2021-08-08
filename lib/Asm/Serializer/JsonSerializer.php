@@ -4,6 +4,8 @@ namespace Asm\Serializer;
 
 use Asm\Serializer;
 
+use function JsonSafe\json_encode_safe;
+
 class JsonSerializer implements Serializer
 {
     /**
@@ -12,7 +14,7 @@ class JsonSerializer implements Serializer
      */
     public function serialize(array $data)
     {
-        return \json_encode($data);
+        return json_encode_safe($data);
     }
 
     /**

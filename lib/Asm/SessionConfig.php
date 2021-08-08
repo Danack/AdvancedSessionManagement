@@ -11,7 +11,7 @@ class SessionConfig
     /**
      * @var int How long session data should persist for in seconds
      */
-    private $lifetime;
+    private int $lifetime;
 
     /**
      * @var int When a session ID is changed through Session::regenerateSessionID
@@ -19,10 +19,11 @@ class SessionConfig
      * This is useful when multiple requests hit the server at the same time, and you don't want
      * them to block each other.
      */
-    private $zombieTime;
+    private int $zombieTime;
 
-    private $sessionName;
+    private string $sessionName;
 
+    private string $lockMode;
 
     /**
      * @var int How long sessions should be locked for when they are locked. Sessions that
@@ -30,20 +31,18 @@ class SessionConfig
      * that the PHP processing them has crashed.
      *
      */
-    private $lockMilliSeconds;
+    private int $lockMilliSeconds;
 
-    /**
-     * @var
-     */
-    private $maxLockWaitTimeMilliseconds;
+
+    private int $maxLockWaitTimeMilliseconds;
 
     public function __construct(
-        $sessionName,
-        $lifetime,
-        $zombieTime = 5,
-        $lockMode = self::LOCK_ON_OPEN,
-        $lockTimeInMilliseconds = 30000,
-        $maxLockWaitTimeMilliseconds = 15000
+        string $sessionName,
+        int $lifetime,
+        int $zombieTime = 5,
+        string $lockMode = self::LOCK_ON_OPEN,
+        int $lockTimeInMilliseconds = 30000,
+        int $maxLockWaitTimeMilliseconds = 15000
     ) {
         $this->sessionName = $sessionName;
         $this->lifetime = $lifetime;
@@ -57,44 +56,33 @@ class SessionConfig
         $this->maxLockWaitTimeMilliseconds = $maxLockWaitTimeMilliseconds;
     }
 
-    /**
-     * @return mixed
-     */
-    public function getLifetime()
+
+    public function getLifetime(): int
     {
         return $this->lifetime;
     }
 
-    /**
-     * @return mixed
-     */
-    public function getSessionName()
+    public function getSessionName(): string
     {
         return $this->sessionName;
     }
 
-    /**
-     * @return mixed
-     */
-    public function getZombieTime()
+    public function getZombieTime(): int
     {
         return $this->zombieTime;
     }
 
-    public function getLockMilliSeconds()
+    public function getLockMilliSeconds(): int
     {
         return $this->lockMilliSeconds;
     }
 
-    public function getMaxLockWaitTimeMilliseconds()
+    public function getMaxLockWaitTimeMilliseconds(): int
     {
         return $this->maxLockWaitTimeMilliseconds;
     }
 
-    /**
-     * @return string
-     */
-    public function getLockMode()
+    public function getLockMode(): string
     {
         return $this->lockMode;
     }

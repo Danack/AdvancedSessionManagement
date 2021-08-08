@@ -3,6 +3,8 @@
 namespace Asm;
 
 use Asm\Encrypter;
+use Asm\Predis\PredisSession;
+use Asm\Profile\SimpleProfile;
 
 /**
  * Interface Driver
@@ -18,27 +20,25 @@ interface Driver
     /**
      * Open an existing session. Returns either the opened session or null if
      * the session could not be found.
-     * @param $sessionID string
-     * @param $encrypter Encrypter
+     * @param string $sessionID
+     * @param Encrypter $encrypter
      * @param SessionManager $sessionManager
-     * @param string|null $userProfile
+     * @param ?SimpleProfile $userProfile
      * @return Session|null The newly opened session
      */
     public function openSessionByID(
         string $sessionID,
         Encrypter $encrypter,
         SessionManager $sessionManager,
-        $userProfile = null
-    );
+        ?SimpleProfile $userProfile
+    ): ?Session;
 
-    /**
-     * Create a new session.
-     * @param \Asm\Encrypter $encrypter
-     * @param SessionManager $sessionManager
-     * @param null $userProfile
-     * @return mixed
-     */
-    public function createSession(Encrypter $encrypter, SessionManager $sessionManager, $userProfile = null);
+
+    public function createSession(
+        Encrypter $encrypter,
+        SessionManager $sessionManager,
+        SimpleProfile $userProfile = null
+    ): Session;
 
 
     /**
@@ -49,15 +49,11 @@ interface Driver
 
     /**
      * Delete a single session that matches the $sessionID
-     * @param $sessionID
      */
-    public function deleteSessionByID($sessionID);
+    public function deleteSessionByID(string $sessionID): void;
 
-    /**
-     * @param $sessionID
-     * @return mixed
-     */
-    public function forceReleaseLockByID($sessionID);
+
+    public function forceReleaseLockByID(string $sessionID): void;
 
     //function findSessionIDFromZombieID($zombieSsessionID);
 }
