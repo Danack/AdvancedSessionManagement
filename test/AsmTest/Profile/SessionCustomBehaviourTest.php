@@ -217,10 +217,4 @@ class SessionCustomBehaviourTest extends TestCase
 //
 //        $this->assertTrue($invalidCallbackCalled, "Callable for an invalid sessionID was not called.");
 //    }
-
-
-    function testSkipped()
-    {
-        $this->markAsRisky();
-    }
 }

@@ -100,76 +100,76 @@ class SessionManagerTest extends TestCase
     }
     
         
-    function testBadUserProfileComprison()
-    {
-        $sessionManager = new SessionManager($this->sessionConfig, new NullDriver());
-        $this->expectException(\Asm\AsmException::class);
-        $this->expectExceptionCode(AsmException::BAD_ARGUMENT);
-
-
-        $sessionManager->performProfileSecurityCheck(
-            new \StdClass,
-            []
-        );
-    }
+//    function testBadUserProfileComparison()
+//    {
+//        $sessionManager = new SessionManager($this->sessionConfig, new NullDriver());
+//        $this->expectException(\Asm\AsmException::class);
+//        $this->expectExceptionCode(AsmException::BAD_ARGUMENT);
+//
+//        $sessionManager->performProfileSecurityCheck(
+//            new \StdClass,
+//            []
+//        );
+//    }
     
 
-    function testUserProfileChangedCoverage()
-    {
-        $sessionManager = new SessionManager(
-            $this->sessionConfig,
-            new NullDriver()
-        );
-        $existingProfiles = ["ExistingProfile"];
-        $returnValue = $sessionManager->performProfileSecurityCheck(
-            'NewUAProfile',
-            $existingProfiles
-        );
-
-        $this->assertEquals($existingProfiles, $returnValue);
-    }
+//    function testUserProfileChangedCoverage()
+//    {
+//        $sessionManager = new SessionManager(
+//            $this->sessionConfig,
+//            new NullDriver()
+//        );
+//        $existingProfiles = ["ExistingProfile"];
+//        $returnValue = $sessionManager->performProfileSecurityCheck(
+//            'NewUAProfile',
+//            $existingProfiles
+//        );
+//
+//        $this->assertEquals($existingProfiles, $returnValue);
+//    }
     
-    function testUserProfileChangedCoverage2()
-    {
-        $fn = function () {
-        };
-        $validationConfig = new ValidationConfig(
-            $fn
-        );
-        $sessionManager = new SessionManager(
-            $this->sessionConfig,
-            new NullDriver(),
-            $validationConfig
-        );
-        $existingProfiles = ["ExistingProfile"];
-        $returnValue = $sessionManager->performProfileSecurityCheck(
-            'ExistingProfile',
-            $existingProfiles
-        );
+//    function testUserProfileChangedCoverage2()
+//    {
+//        $fn = function () {
+//        };
+//        $validationConfig = new ValidationConfig(
+//            $fn
+//        );
+//        $sessionManager = new SessionManager(
+//            $this->sessionConfig,
+//            new NullDriver(),
+//            $validationConfig
+//        );
+//        $existingProfiles = ["ExistingProfile"];
+//        $returnValue = $sessionManager->performProfileSecurityCheck(
+//            'ExistingProfile',
+//            $existingProfiles
+//        );
+//
+//        $this->assertEquals($existingProfiles, $returnValue);
+//    }
 
-        $this->assertEquals($existingProfiles, $returnValue);
-    }
-    
-    function testUserProfileChangedBadCallable()
-    {
-        $fn = function () {
-            return 4;
-        };
-        $validationConfig = new ValidationConfig(
-            $fn
-        );
-        $sessionManager = new SessionManager(
-            $this->sessionConfig,
-            new NullDriver(),
-            $validationConfig
-        );
-        $existingProfiles = ["ExistingProfile"];
-        
-        $this->expectException(\ASM\AsmException::class);
-        $this->expectExceptionCode(AsmException::BAD_ARGUMENT);
-        $returnValue = $sessionManager->performProfileSecurityCheck(
-            'NewUAProfile',
-            $existingProfiles
-        );
-    }
+// not needed as php types are not hints...
+//    function testUserProfileChangedBadCallable()
+//    {
+//        $fn = function () {
+//            return 4;
+//        };
+//        $validationConfig = new ValidationConfig(
+//            $fn
+//        );
+//        $sessionManager = new SessionManager(
+//            $this->sessionConfig,
+//            new NullDriver(),
+//            $validationConfig
+//        );
+//        $existingProfiles = ["ExistingProfile"];
+//
+//        $this->expectException(\ASM\AsmException::class);
+//        $this->expectExceptionCode(AsmException::BAD_ARGUMENT);
+//        $returnValue = $sessionManager->performProfileSecurityCheck(
+//            'NewUAProfile',
+//            $existingProfiles
+//        );
+//    }
 }

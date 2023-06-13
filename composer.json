@@ -23,7 +23,8 @@
         "yoast/yoastcs": "1.0"
     },
     "require": {
-        "danack/json-safe":  "^0.1.0",
+        "danack/json-safe": ">=0.1.1",
+        "psr/http-server-middleware": "^1.0.2",
         "php" : "^8.0",
         "ircmaxell/random-lib": "^1.1.0",
         "ext-openssl": "*",

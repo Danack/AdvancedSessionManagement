@@ -4,24 +4,21 @@ declare(strict_types = 1);
 
 namespace Asm\Bridge;
 
-use Auryn\Injector;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ServerRequestInterface as ServerRequest;
-use Asm\Session;
 use Asm\SessionManager;
+use Asm\RequestSessionStorage;
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
-class SlimSessionMiddleware
+
+class SlimSessionMiddleware implements MiddlewareInterface
 {
-    /** @var SessionManager */
-    private $sessionManager;
-
-    /** @var Injector  */
-    private $injector;
-
-    public function __construct(SessionManager $sessionManager, Injector $injector)
-    {
-        $this->sessionManager = $sessionManager;
-        $this->injector = $injector;
+    public function __construct(
+        private SessionManager $sessionManager,
+        private RequestSessionStorage $requestSessionStorage
+    ) {
     }
 
     /**
@@ -31,13 +28,14 @@ class SlimSessionMiddleware
      * @return \Psr\Http\Message\ResponseInterface
      * @throws \Auryn\ConfigException
      */
-    public function __invoke(ServerRequest $request, ResponseInterface $response, $next): ResponseInterface
+
+    public function process(Request $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $session = $this->sessionManager->createSession($request);
-        $this->injector->share($session);
-        $this->injector->alias(\Asm\Session::class, get_class($session));
+        $this->requestSessionStorage->store($session);
+//        $response = $next($request, $response);
+        $response = $handler->handle($request);
 
-        $response = $next($request, $response);
         $session->save();
         $headers = $session->getHeaders(
             \Asm\SessionManager::CACHE_PRIVATE,
