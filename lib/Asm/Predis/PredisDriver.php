@@ -275,7 +275,10 @@ END;
             $sessionLifeTime
         );
 
-        if ($written !== true) {
+        /** @var $written \Predis\Response\Status */
+
+        if ($written->getPayload() !== 'OK') {
+            // TODO - handle this more gracefully...
             throw new AsmException("Failed to save data", AsmException::IO_ERROR);
         }
     }

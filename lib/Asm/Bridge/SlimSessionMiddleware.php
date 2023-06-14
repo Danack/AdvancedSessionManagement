@@ -31,23 +31,34 @@ class SlimSessionMiddleware implements MiddlewareInterface
 
     public function process(Request $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $session = $this->sessionManager->createSession($request);
-        $this->requestSessionStorage->store($session);
-//        $response = $next($request, $response);
+        $session = $this->sessionManager->openSessionFromCookie($request);
+
+        if ($session) {
+            $this->requestSessionStorage->store($session);
+        }
+
         $response = $handler->handle($request);
 
-        $session->save();
-        $headers = $session->getHeaders(
-            \Asm\SessionManager::CACHE_PRIVATE,
-            '/'
+        // Session could have been opened inside request
+        $session = $this->requestSessionStorage->get();
+        
+        if ($session) {
+            $session->save();
+            $headersArrays = $session->getHeaders(
+                \Asm\SessionManager::CACHE_PRIVATE,
+                '/'
             //        $domain = false,
             //        $secure = false,
             //        $httpOnly = true
-        );
+            );
 
-        foreach ($headers as $key => $value) {
-            /** @var ResponseInterface $response */
-            $response = $response->withAddedHeader($key, $value);
+            foreach ($headersArrays as $nameAndValue) {
+                $name = $nameAndValue[0];
+                $value = $nameAndValue[1];
+
+                /** @var ResponseInterface $response */
+                $response = $response->withAddedHeader($name, $value);
+            }
         }
 
         return $response;
