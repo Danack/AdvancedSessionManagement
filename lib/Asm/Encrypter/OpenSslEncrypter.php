@@ -21,6 +21,10 @@ class OpenSslEncrypter implements Encrypter
     private function __construct(string $keyName, string $encodedKey)
     {
         $this->keyName = $keyName;
+        // Pluses are converted to spaces by:
+        // https://github.com/laminas/laminas-diactoros/issues/165
+        $encodedKey = str_replace(" ", "+", $encodedKey);
+
         $decode_result = base64_decode($encodedKey, true);
 
         if ($decode_result === false) {
