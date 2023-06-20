@@ -2,8 +2,6 @@
 
 namespace Asm;
 
-use Asm\Encrypter;
-use Asm\Predis\PredisSession;
 use Asm\Profile\SimpleProfile;
 
 /**
